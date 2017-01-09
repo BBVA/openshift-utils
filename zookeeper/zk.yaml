@@ -97,4 +97,5 @@ objects:
     - name: 3888-tcp
       port: 3888
     selector:
+      app: ${NAME}
       deploymentconfig: ${NAME}

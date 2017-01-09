@@ -97,15 +97,5 @@ objects:
     ports:
     - port: 9092
     selector:
+      app: ${NAME}
       deploymentconfig: ${NAME}
-
-- apiVersion: v1
-  kind: Service
-  metadata:
-    name: ${NAME}
-  spec:
-    ports:
-    - port: 9092
-    selector:
-      deploymentconfig: ${NAME}
-

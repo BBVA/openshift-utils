@@ -1,0 +1,111 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: ml-kfk
+  annotations:
+    description: Kafka
+    tags: ML,messaging,kafka
+
+parameters:
+- name: VOLUME_CAPACITY
+  description: Persistent volume capacity per pod, e.g. 512Mi, 2Gi
+  required: true
+  value: 512Mi
+- name: NAME
+  description: Name prefix for each object created
+  required: true
+  value: kafkanetes-kafka
+- name: ZOOKEEPER_SERVICE
+  description: DNS name of ZooKeeper service
+  required: true
+  value: ml-zk
+- name: IMAGESTREAM
+  description: Kafkanetes imagestream name
+  required: true
+  value: kafkanetes
+- name: REPLICAS
+  description: Number of replicas [1,2, ...]
+  required: true
+  value: 1
+
+objects:
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: ${NAME}
+    annotations:
+      volume.alpha.kubernetes.io/storage-class: ${NAME}
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: ${VOLUME_CAPACITY}
+
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    name: ${NAME}
+  spec:
+    replicas: ${REPLICAS}
+    selector:
+      deploymentconfig: ${NAME}
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          deploymentconfig: ${NAME}
+      spec:
+        containers:
+        - name: kafkanetes
+          image: ${IMAGESTREAM}
+          command:
+          - bin/kafka-server-start.sh
+          args:
+          - config/server.properties
+          - --override
+          - zookeeper.connect=${ZOOKEEPER_SERVICE}
+          - --override
+          - advertised.host.name=${NAME}
+          - --override
+          - broker.id=0
+          volumeMounts:
+          - mountPath: /tmp/kafka-logs
+            name: kafka-logs
+          ports:
+          - containerPort: 9092
+        volumes:
+        - name: kafka-logs
+          persistentVolumeClaim:
+            claimName: ${NAME}
+    triggers:
+    - type: ConfigChange
+    - type: ImageChange
+      imageChangeParams:
+        automatic: false
+        containerNames:
+        - kafkanetes
+        from:
+          kind: ImageStream
+          name: ${IMAGESTREAM}
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${NAME}
+  spec:
+    ports:
+    - port: 9092
+    selector:
+      deploymentconfig: ${NAME}
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${NAME}
+  spec:
+    ports:
+    - port: 9092
+    selector:
+      deploymentconfig: ${NAME}
+

@@ -1,101 +1,281 @@
-apiVersion: v1
 kind: Template
+apiVersion: v1
 metadata:
-  name: ml-zk
+  name: zookeeper
+  creationTimestamp:
   annotations:
-    description: ZooKeeper
-    tags: ML,messaging,zookeeper
-
+    openshift.io/display-name: Zookeeper
+    description: An example of a replicated Zookeeper server
+    iconClass: icon-database
+    tags: database,zookeeper
+labels:
+  template: zookeeper
 parameters:
-- name: VOLUME_CAPACITY
-  description: Persistent volume capacity per pod, e.g. 512Mi, 2Gi
-  required: true
-  value: 512Mi
-- name: NAME
-  description: Name prefix for each object created
-  required: true
-  value: ml-zk
-- name: IMAGESTREAM
-  description: Image name
-  required: true
-  value: kafkanetes
-- name: REPLICAS
-  description: Number of replicas [1,3, ...]
-  required: true
-  value: 1
-
+- name: ZOOKEEPER_IMAGE
+  displayName: Zookeeper Docker Image
+  description: The name of Zookeeper Docker image to use
+  value: zookeeper
 objects:
-- apiVersion: v1
-  kind: PersistentVolumeClaim
+- kind: ImageStream
+  apiVersion: v1
   metadata:
-    name: ${NAME}
-    annotations:
-      volume.alpha.kubernetes.io/storage-class: ${NAME}
+    name: zookeeper
+    creationTimestamp:
   spec:
-    accessModes:
-    - ReadWriteOnce
-    resources:
-      requests:
-        storage: ${VOLUME_CAPACITY}
-
-- apiVersion: v1
-  kind: DeploymentConfig
+    dockerImageRepository: "${ZOOKEEPER_IMAGE}"
+    tags:
+    - name: zookeeper
+      annotations:
+        description: Provides Zookeeper Server
+        iconClass: icon-database
+        tags: service,zookeeper, builder
+        version: latest
+  status:
+    dockerImageRepository: ''
+  status:
+    dockerImageRepository: ''
+- kind: Service
+  apiVersion: v1
   metadata:
-    name: ${NAME}
-  spec:
-    replicas: ${REPLICAS}
-    selector:
-      deploymentconfig: ${NAME}
-    template:
-      metadata:
-        labels:
-          app: ${NAME}
-          deploymentconfig: ${NAME}
-      spec:
-        containers:
-        - name: ml-zk
-          image: ${IMAGESTREAM}
-          command:
-          - bin/zookeeper-server-start-multiple.sh
-          args:
-          - config/zookeeper.properties
-          - ${NAME}
-          - "1"
-          - "3"
-          volumeMounts:
-          - mountPath: /tmp/zookeeper
-            name: zookeeper
-          ports:
-          - containerPort: 2181
-          - containerPort: 2888
-          - containerPort: 3888
-        volumes:
-        - name: zookeeper
-          persistentVolumeClaim:
-            claimName: ${NAME}
-    triggers:
-    - type: ConfigChange
-    - type: ImageChange
-      imageChangeParams:
-        automatic: false
-        containerNames:
-        - ml-zk
-        from:
-          kind: ImageStream
-          name: ${IMAGESTREAM}
-
-- apiVersion: v1
-  kind: Service
-  metadata:
-    name: ${NAME}
+    name: zookeeper
+    creationTimestamp:
+    labels:
+      name: zookeeper
   spec:
     ports:
-    - name: 2181-tcp
+    - name: client
+      protocol: TCP
       port: 2181
-    - name: 2888-tcp
-      port: 2888
-    - name: 3888-tcp
-      port: 3888
+      targetPort: 2181
+      nodePort: 0
     selector:
-      app: ${NAME}
-      deploymentconfig: ${NAME}
+      name: zookeeper
+    type: ClusterIP
+    sessionAffinity: None
+  status:
+    loadBalancer: {}
+- kind: Service
+  apiVersion: v1
+  metadata:
+    name: zookeeper-1
+    creationTimestamp:
+    labels:
+      name: zookeeper-1
+  spec:
+    ports:
+    - name: client
+      protocol: TCP
+      port: 2181
+      targetPort: 2181
+      nodePort: 0
+    - name: followers
+      protocol: TCP
+      port: 2888
+      targetPort: 2888
+      nodePort: 0
+    - name: election
+      protocol: TCP
+      port: 3888
+      targetPort: 3888
+      nodePort: 0
+    selector:
+      server-id: '1'
+    type: ClusterIP
+    sessionAffinity: None
+  status:
+    loadBalancer: {}
+- kind: Service
+  apiVersion: v1
+  metadata:
+    name: zookeeper-2
+    creationTimestamp:
+    labels:
+      name: zookeeper-2
+  spec:
+    ports:
+    - name: client
+      protocol: TCP
+      port: 2181
+      targetPort: 2181
+      nodePort: 0
+    - name: followers
+      protocol: TCP
+      port: 2888
+      targetPort: 2888
+      nodePort: 0
+    - name: election
+      protocol: TCP
+      port: 3888
+      targetPort: 3888
+      nodePort: 0
+    selector:
+      server-id: '2'
+    type: ClusterIP
+    sessionAffinity: None
+  status:
+    loadBalancer: {}
+- kind: Service
+  apiVersion: v1
+  metadata:
+    name: zookeeper-3
+    creationTimestamp:
+    labels:
+      name: zookeeper-3
+  spec:
+    ports:
+    - name: client
+      protocol: TCP
+      port: 2181
+      targetPort: 2181
+      nodePort: 0
+    - name: followers
+      protocol: TCP
+      port: 2888
+      targetPort: 2888
+      nodePort: 0
+    - name: election
+      protocol: TCP
+      port: 3888
+      targetPort: 3888
+      nodePort: 0
+    selector:
+      server-id: '3'
+    type: ClusterIP
+    sessionAffinity: None
+  status:
+    loadBalancer: {}
+- kind: Pod
+  apiVersion: v1
+  metadata:
+    name: zookeeper-1
+    creationTimestamp:
+    labels:
+      name: zookeeper
+      server-id: '1'
+  spec:
+    volumes:
+    - name: conf
+      emptyDir: {}
+    - name: data
+      emptyDir: {}
+    - name: log
+      emptyDir: {}
+    containers:
+    - name: server
+      image: "${ZOOKEEPER_IMAGE}"
+      ports:
+      - containerPort: 2181
+        protocol: TCP
+      - containerPort: 2888
+        protocol: TCP
+      - containerPort: 3888
+        protocol: TCP
+      env:
+      - name: SERVER_ID
+        value: '1'
+      volumeMounts:
+      - name: conf
+        mountPath: "/conf"
+      - name: data
+        mountPath: "/data"
+      - name: log
+        mountPath: "/datalog"
+      resources: {}
+      terminationMessagePath: "/dev/termination-log"
+      imagePullPolicy: IfNotPresent
+      securityContext:
+        capabilities: {}
+        privileged: false
+    restartPolicy: Always
+    dnsPolicy: ClusterFirst
+  status: {}
+- kind: Pod
+  apiVersion: v1
+  metadata:
+    name: zookeeper-2
+    creationTimestamp:
+    labels:
+      name: zookeeper
+      server-id: '2'
+  spec:
+    volumes:
+    - name: conf
+      emptyDir: {}
+    - name: data
+      emptyDir: {}
+    - name: log
+      emptyDir: {}
+    containers:
+    - name: server
+      image: "${ZOOKEEPER_IMAGE}"
+      ports:
+      - containerPort: 2181
+        protocol: TCP
+      - containerPort: 2888
+        protocol: TCP
+      - containerPort: 3888
+        protocol: TCP
+      env:
+      - name: SERVER_ID
+        value: '2'
+      volumeMounts:
+      - name: conf
+        mountPath: "/conf"
+      - name: data
+        mountPath: "/data"
+      - name: log
+        mountPath: "/datalog"
+      resources: {}
+      terminationMessagePath: "/dev/termination-log"
+      imagePullPolicy: IfNotPresent
+      securityContext:
+        capabilities: {}
+        privileged: false
+    restartPolicy: Always
+    dnsPolicy: ClusterFirst
+  status: {}
+- kind: Pod
+  apiVersion: v1
+  metadata:
+    name: zookeeper-3
+    creationTimestamp:
+    labels:
+      name: zookeeper
+      server-id: '3'
+  spec:
+    volumes:
+    - name: conf
+      emptyDir: {}
+    - name: data
+      emptyDir: {}
+    - name: log
+      emptyDir: {}
+    containers:
+    - name: server
+      image: "${ZOOKEEPER_IMAGE}"
+      ports:
+      - containerPort: 2181
+        protocol: TCP
+      - containerPort: 2888
+        protocol: TCP
+      - containerPort: 3888
+        protocol: TCP
+      env:
+      - name: SERVER_ID
+        value: '3'
+      volumeMounts:
+      - name: conf
+        mountPath: "/conf"
+      - name: data
+        mountPath: "/data"
+      - name: log
+        mountPath: "/datalog"
+      resources: {}
+      terminationMessagePath: "/dev/termination-log"
+      imagePullPolicy: IfNotPresent
+      securityContext:
+        capabilities: {}
+        privileged: false
+    restartPolicy: Always
+    dnsPolicy: ClusterFirst
+  status: {}

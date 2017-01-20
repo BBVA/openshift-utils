@@ -76,12 +76,30 @@ parameters:
   description: Purge task interval in hours. Set to 0 to disable auto purge feature
   required: true
   value: '1'
+- name: ZOO_SCALE
+  description: Number of nodes
+  required: true
+  value: "1"
 
 objects:
 - apiVersion: v1
   kind: PersistentVolumeClaim
   metadata:
-    name: zookeeper
+    name: zookeeper-datalog
+    annotations: {
+        volume.alpha.kubernetes.io/storage-class: "fast"
+    }
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: ${VOLUME_CAPACITY}
+
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: zookeeper-data
     annotations: {
         volume.alpha.kubernetes.io/storage-class: "fast"
     }
@@ -97,7 +115,7 @@ objects:
   metadata:
     name: zookeeper
   spec:
-    replicas: 1
+    replicas: ${ZOO_SCALE}
     selector:
       deploymentconfig: zookeeper
     template:
@@ -132,25 +150,20 @@ objects:
           - name: ZOO_AUTOPURGE_PURGEINTERVAL
             value: ${ZOO_AUTOPURGE_PURGEINTERVAL}
           volumeMounts:
-          - name: conf
-            mountPath: ${ZOO_CONF_DIR}
           - name: data
             mountPath: ${ZOO_DATA_DIR}
-          - name: log
+          - name: datalog
             mountPath: ${ZOO_DATA_LOG_DIR}
           ports:
           - containerPort: ${ZOO_PORT}
             protocol: TCP
         volumes:
-        - name: conf
-          persistentVolumeClaim:
-            claimName: zookeeper
         - name: data
           persistentVolumeClaim:
-            claimName: zookeeper
-        - name: log
+            claimName: zookeeper-data
+        - name: datalog
           persistentVolumeClaim:
-            claimName: zookeeper
+            claimName: zookeeper-datalog
     triggers:
     - type: ConfigChange
       configChangeParams:

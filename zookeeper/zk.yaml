@@ -1,7 +1,7 @@
 kind: Template
 apiVersion: v1
 metadata:
-  name: zookeeper-1-node
+  name: zk
   creationTimestamp:
   annotations:
     openshift.io/display-name: Zookeeper
@@ -9,172 +9,204 @@ metadata:
     iconClass: icon-database
     tags: database,zookeeper
 labels:
-  template: zookeeper
+  template: zk
 parameters:
-- name: ZOOKEEPER_IMAGE
-  displayName: ZOOKEEPER_IMAGE
-  description: The name of Zookeeper Docker image to use
-  required: true
-  value: bbvalabs/zookeeper
 - name: VOLUME_CAPACITY
-  displayName: VOLUME_CAPACITY
+  displayName: Volume Capacity
   description: Persistent volume capacity per pod, e.g. 512Mi, 2Gi
   required: true
-  value: 512Mi
+  value: 10Gi
 - name: ZOO_USER
-  displayName: ZOO_USER
+  displayName: User
   description: Zookeeper user
   required: true
   value: zookeeper
 - name: ZOO_CONF_DIR
-  displayName: ZOO_CONF_DIR
+  displayName: Configuration Directory
   description: Path for configuration directory
   required: true
   value: /conf
 - name: ZOO_DATA_DIR
-  displayName: ZOO_DATA_DIR
+  displayName: Data Directory
   description: Path for data directory
   required: true
   value: /data
 - name: ZOO_DATA_LOG_DIR
-  displayName: ZOO_DATA_LOG_DIR
+  displayName: Data Log Directory
   description: Path for log directory
   required: true
   value: /datalog
 - name: ZOO_TICK_TIME
-  displayName: ZOO_TICK_TIME
+  displayName: Tick Time
   description: The number of milliseconds of each tick
   required: true
   value: '2000'
 - name: ZOO_INIT_LIMIT
-  displayName: ZOO_INIT_LIMIT
+  displayName: Init Limit
   description: The number of ticks that the initial synchronization phase can take
   required: true
   value: '5'
 - name: ZOO_SYNC_LIMIT
-  displayName: ZOO_SYNC_LIMIT
+  displayName: Sync Limit
   description: The number of ticks that can pass between sending a request and getting an acknowledgement
   required: true
   value: '2'
-- name: ZOO_PORT
-  displayName: ZOO_PORT
+- name: ZOO_CLIENT_PORT
+  displayName: Port
   description: The port at which the clients will connect
   required: true
   value: '2181'
+- name: ZOO_SERVER_PORT
+  displayName: Port
+  description: Server Port
+  required: true
+  value: '2888'
+- name: ZOO_ELECTION_PORT
+  displayName: Election Port
+  description: Election
+  required: true
+  value: '3888'
 - name: ZOO_MAX_CLIENT_CNXNS
-  displayName: ZOO_MAX_CLIENT_CNXNS
+  displayName: Maximum number of client connections
   description: The maximum number of client connections
   required: true
   value: '60'
-- name: ZOO_AUTOPURGE_SANPRETAINCOUNT
-  displayName: ZOO_AUTOPURGE_SANPRETAINCOUNT
+- name: ZOO_SNAP_RETAIN_COUNT
+  displayName: Number of snapshots to retain in dataDir
   description: The number of snapshots to retain in dataDir
   required: true
   value: '3'
-- name: ZOO_AUTOPURGE_PURGEINTERVAL
-  displayName: ZOO_AUTOPURGE_PURGEINTERVAL
+- name: ZOO_PURGE_INTERVAL
+  displayName: Purge task interval
   description: Purge task interval in hours. Set to 0 to disable auto purge feature
   required: true
   value: '1'
 - name: ZOO_SCALE
+  displayName: Number of nodes
   description: Number of nodes
   required: true
   value: "1"
+- name: ZOO_HEAP_SIZE
+  displayName: JVM heat size
+  description: JVM heat size
+  required: true
+  value: "1G"
 
 objects:
 - apiVersion: v1
-  kind: PersistentVolumeClaim
+  kind: Service
   metadata:
-    name: zookeeper-datalog
-    annotations: {
-        volume.alpha.kubernetes.io/storage-class: "fast"
-    }
+    name: zk-headless
+    labels:
+      app: zk-headless
+    annotations:
+      service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
   spec:
-    accessModes:
-    - ReadWriteOnce
-    resources:
-      requests:
-        storage: ${VOLUME_CAPACITY}
-
-- apiVersion: v1
-  kind: PersistentVolumeClaim
-  metadata:
-    name: zookeeper-data
-    annotations: {
-        volume.alpha.kubernetes.io/storage-class: "fast"
-    }
-  spec:
-    accessModes:
-    - ReadWriteOnce
-    resources:
-      requests:
-        storage: ${VOLUME_CAPACITY}
-
-- apiVersion: v1
-  kind: DeploymentConfig
-  metadata:
-    name: zookeeper
-  spec:
-    replicas: ${ZOO_SCALE}
+    ports:
+    - port: 2888
+      name: server
+    - port: 3888
+      name: leader-election
+    clusterIP: None
     selector:
-      deploymentconfig: zookeeper
+      app: zk
+
+- apiVersion: apps/v1alpha1
+  kind: PetSet
+  metadata:
+    name: zk
+  spec:
+    serviceName: zk-headless
+    replicas: ${ZOO_SCALE}
     template:
       metadata:
         labels:
-          deploymentconfig: zookeeper
+          app: zk
+        annotations:
+          pod.alpha.kubernetes.io/initialized: "true"
+          scheduler.alpha.kubernetes.io/affinity: >
+              {
+                "podAntiAffinity": {
+                  "requiredDuringSchedulingIgnoredDuringExecution": [{
+                    "labelSelector": {
+                      "matchExpressions": [{
+                        "key": "app",
+                        "operator": "In",
+                        "values": ["zk"]
+                      }]
+                    },
+                    "topologyKey": "kubernetes.io/hostname"
+                  }]
+                }
+              }
       spec:
         containers:
-        - name: server
-          image: ${ZOOKEEPER_IMAGE}
-          env:
-          - name: ZOO_USER
-            value: ${ZOO_USER}
-          - name: ZOO_CONF_DIR
-            value: ${ZOO_CONF_DIR}
-          - name: ZOO_DATA_DIR
-            value: ${ZOO_DATA_DIR}
-          - name: ZOO_DATA_LOG_DIR
-            value: ${ZOO_DATA_LOG_DIR}
-          - name: ZOO_TICK_TIME
-            value: ${ZOO_TICK_TIME}
-          - name: ZOO_INIT_LIMIT
-            value: ${ZOO_INIT_LIMIT}
-          - name: ZOO_SYNC_LIMIT
-            value: ${ZOO_SYNC_LIMIT}
-          - name: ZOO_PORT
-            value: ${ZOO_PORT}
-          - name: ZOO_MAX_CLIENT_CNXNS
-            value: ${ZOO_MAX_CLIENT_CNXNS}
-          - name: ZOO_AUTOPURGE_SANPRETAINCOUNT
-            value: ${ZOO_AUTOPURGE_SANPRETAINCOUNT}
-          - name: ZOO_AUTOPURGE_PURGEINTERVAL
-            value: ${ZOO_AUTOPURGE_PURGEINTERVAL}
-          volumeMounts:
-          - name: data
-            mountPath: ${ZOO_DATA_DIR}
-          - name: datalog
-            mountPath: ${ZOO_DATA_LOG_DIR}
+        - name: k8szk
+          imagePullPolicy: Always
+          image: gcr.io/google_samples/k8szk:v2
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "1"
           ports:
-          - containerPort: ${ZOO_PORT}
-            protocol: TCP
-        volumes:
-        - name: data
-          persistentVolumeClaim:
-            claimName: zookeeper-data
-        - name: datalog
-          persistentVolumeClaim:
-            claimName: zookeeper-datalog
-    triggers:
-    - type: ConfigChange
-      configChangeParams:
-        automatic: false
-
-- apiVersion: v1
-  kind: Service
-  metadata:
-    name: zookeeper
-  spec:
-    ports:
-    - port: ${ZOO_PORT}
-    selector:
-      deploymentconfig: zookeeper
+          - containerPort: ${ZOO_CLIENT_PORT}
+            name: client
+          - containerPort: ${ZOO_SERVER_PORT}
+            name: server
+          - containerPort: ${ZOO_ELECTION_PORT}
+            name: leader-election
+          env:
+          - name : ZK_REPLICAS
+            value: ${ZOO_SCALE}
+          - name : ZK_HEAP_SIZE
+            value: ${ZOO_HEAP_SIZE}
+          - name : ZK_TICK_TIME
+            value: ${ZOO_TICK_TIME}
+          - name : ZK_INIT_LIMIT
+            value: ${ZOO_INIT_LIMIT}
+          - name : ZK_SYNC_LIMIT
+            value: ${ZOO_SYNC_LIMIT}
+          - name : ZK_MAX_CLIENT_CNXNS
+            value: ${ZOO_MAX_CLIENT_CNXNS}
+          - name: ZK_SNAP_RETAIN_COUNT
+            value: ${ZOO_SNAP_RETAIN_COUNT}
+          - name: ZK_PURGE_INTERVAL
+            value: ${ZOO_PURGE_INTERVAL}
+          - name: ZK_CLIENT_PORT
+            value: ${ZOO_CLIENT_PORT}
+          - name: ZK_SERVER_PORT
+            value: ${ZOO_SERVER_PORT}
+          - name: ZK_ELECTION_PORT
+            value: ${ZOO_ELECTION_PORT}
+          command:
+          - sh
+          - -c
+          - zkGenConfig.sh && zkServer.sh start-foreground
+          readinessProbe:
+            exec:
+              command:
+              - "zkOk.sh"
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+              - "zkOk.sh"
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+          volumeMounts:
+          - name: datadir
+            mountPath: /var/lib/zookeeper
+#        securityContext:
+#          runAsUser: 1000
+#          fsGroup: 1000
+    volumeClaimTemplates:
+    - metadata:
+        name: datadir
+        annotations:
+          volume.alpha.kubernetes.io/storage-class: anything
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: ${VOLUME_CAPACITY}

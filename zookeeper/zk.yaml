@@ -123,7 +123,7 @@ objects:
         containers:
         - name: k8szk
           imagePullPolicy: Always
-          image: gcr.io/google_samples/k8szk:v2
+          image: bbvalabs/zookeeper
 #          resources:
 #            requests:
 #              memory: "2Gi"

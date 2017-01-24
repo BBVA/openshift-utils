@@ -16,26 +16,6 @@ parameters:
   description: Persistent volume capacity per pod, e.g. 512Mi, 2Gi
   required: true
   value: 10Gi
-- name: ZOO_USER
-  displayName: User
-  description: Zookeeper user
-  required: true
-  value: zookeeper
-- name: ZOO_CONF_DIR
-  displayName: Configuration Directory
-  description: Path for configuration directory
-  required: true
-  value: /conf
-- name: ZOO_DATA_DIR
-  displayName: Data Directory
-  description: Path for data directory
-  required: true
-  value: /data
-- name: ZOO_DATA_LOG_DIR
-  displayName: Data Log Directory
-  description: Path for log directory
-  required: true
-  value: /datalog
 - name: ZOO_TICK_TIME
   displayName: Tick Time
   description: The number of milliseconds of each tick
@@ -144,10 +124,10 @@ objects:
         - name: k8szk
           imagePullPolicy: Always
           image: gcr.io/google_samples/k8szk:v2
-          resources:
-            requests:
-              memory: "2Gi"
-              cpu: "1"
+#          resources:
+#            requests:
+#              memory: "2Gi"
+#              cpu: "1"
           ports:
           - containerPort: ${ZOO_CLIENT_PORT}
             name: client

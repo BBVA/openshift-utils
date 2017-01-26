@@ -2,7 +2,6 @@ kind: Template
 apiVersion: v1
 metadata:
   name: zk
-  creationTimestamp:
   annotations:
     openshift.io/display-name: Zookeeper
     description: An example of a replicated Zookeeper server

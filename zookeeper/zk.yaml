@@ -1,15 +1,19 @@
 kind: Template
 apiVersion: v1
 metadata:
-  name: zk
+  name: zookeeper
   annotations:
     openshift.io/display-name: Zookeeper
     description: An example of a replicated Zookeeper server
     iconClass: icon-database
     tags: database,zookeeper
 labels:
-  template: zk
+  template: zookeeper
 parameters:
+- name: NAME
+  displayName: Name
+  value: zk
+  required: true
 - name: VOLUME_CAPACITY
   displayName: Volume Capacity
   description: Persistent volume capacity per pod, e.g. 512Mi, 2Gi
@@ -75,32 +79,32 @@ objects:
 - apiVersion: v1
   kind: Service
   metadata:
-    name: zk-headless
+    name: ${NAME}-svc
     labels:
-      app: zk-headless
+      app: ${NAME}
     annotations:
       service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
   spec:
     ports:
-    - port: 2888
+    - port: ${ZOO_SERVER_PORT}
       name: server
-    - port: 3888
+    - port: ${ZOO_ELECTION_PORT}
       name: leader-election
     clusterIP: None
     selector:
-      app: zk
+      app: ${NAME}
 
 - apiVersion: apps/v1alpha1
   kind: PetSet
   metadata:
-    name: zk
+    name: ${NAME}
   spec:
-    serviceName: zk-headless
+    serviceName: ${NAME}-svc
     replicas: ${ZOO_SCALE}
     template:
       metadata:
         labels:
-          app: zk
+          app: ${NAME}
         annotations:
           pod.alpha.kubernetes.io/initialized: "true"
           scheduler.alpha.kubernetes.io/affinity: >
@@ -111,7 +115,7 @@ objects:
                       "matchExpressions": [{
                         "key": "app",
                         "operator": "In",
-                        "values": ["zk"]
+                        "values": ["${NAME}"]
                       }]
                     },
                     "topologyKey": "kubernetes.io/hostname"
@@ -120,7 +124,7 @@ objects:
               }
       spec:
         containers:
-        - name: k8szk
+        - name: ${NAME}
           imagePullPolicy: Always
           image: bbvalabs/zookeeper
 #          resources:

@@ -1,101 +1,176 @@
-apiVersion: v1
 kind: Template
+apiVersion: v1
 metadata:
-  name: ml-kfk
+  name: kafka
   annotations:
-    description: Kafka
-    tags: ML,messaging,kafka
+    openshift.io/display-name: Kafka
+    description: A distibuted streaming platform
+    iconClass: icon-messaging
+    tags: messaging,kafka
+
+labels:
+  template: kafka
 
 parameters:
-- name: VOLUME_CAPACITY
-  description: Persistent volume capacity per pod, e.g. 512Mi, 2Gi
-  required: true
-  value: 512Mi
 - name: NAME
-  description: Name prefix for each object created
+  displayName: Name
+  default: kafka
+- name: KAFKA_VERSION
+  displayName: Kafka Version
+  default: "0.10.1.0"
+- name: SCALA_VERSION
+  displayName: Scala Version
+  default: "2.11"
+- name: SCALE
+  description: Number of nodes
   required: true
-  value: kafkanetes-kafka
-- name: ZOOKEEPER_SERVICE
-  description: DNS name of ZooKeeper service
+  value: "1"
+- name: ZK_HEAP_OPTS
+  description: Zookeeper JVM Heap options
   required: true
-  value: ml-zk
-- name: IMAGESTREAM
-  description: Kafkanetes imagestream name
+  value: "-Xmx512M -Xms512M"
+- name: KAFKA_HEAP_OPTS
+  displayName: Kafka JVM Heap options
   required: true
-  value: kafkanetes
-- name: REPLICAS
-  description: Number of replicas [1,2, ...]
+  value: "-Xmx1G -Xms1G"
+- name: SERVER_NUM_PARTITIONS
+  displayName: The default number of log partitions per topic
+  description: >
+    More partitions allow greater
+    parallelism for consumption, but this will also result in more files across
+    the brokers
   required: true
-  value: 1
+  value: "1"
+- name: SERVER_DELETE_TOPIC_ENABLE
+  displayName: Topic deletion enabled
+  description: Switch to enable topic deletion or not, default value is false
+  value: 'false'
+- name: SERVER_LOG_RETENTION_HOURS
+  displayName: Log retention hours
+  description: The minimum age of a log file to be eligible for deletion
+  required: true
+  value: "168"
+- name: KAFKA_ZK_LOCAL
+  description: Wheter you want to start a local zookeeper proccess into the same container
+  required: true
+  value: false
+- name: SERVER_ZOOKEEPER_CONNECT
+  description: Type de zookeeper conection URL. This value takes effect when USE_LOCAL_ZOOKEEPER is false
+  required: true
+  value: "localhost:2181"
+- name: VOLUME_CAPACITY
+  displayName: Volume capacity
+  required: true
+  value: "20Gi"
 
 objects:
 - apiVersion: v1
-  kind: PersistentVolumeClaim
+  kind: Service
   metadata:
-    name: ${NAME}
+    name: ${NAME}-svc
+    labels:
+      app: ${NAME}
     annotations:
-      volume.alpha.kubernetes.io/storage-class: ${NAME}
+      service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
   spec:
-    accessModes:
-    - ReadWriteOnce
-    resources:
-      requests:
-        storage: ${VOLUME_CAPACITY}
+    ports:
+    - port: ${SERVER_PORT}
+      name: server
+    clusterIP: None
+    selector:
+      app: ${NAME}
 
-- apiVersion: v1
-  kind: DeploymentConfig
+- apiVersion: apps/v1alpha1
+  kind: PetSet
   metadata:
     name: ${NAME}
   spec:
-    replicas: ${REPLICAS}
-    selector:
-      deploymentconfig: ${NAME}
+    serviceName: ${NAME}-svc
+    replicas: ${SCALE}
     template:
       metadata:
         labels:
           app: ${NAME}
-          deploymentconfig: ${NAME}
+        annotations:
+          pod.alpha.kubernetes.io/initialized: "true"
+          scheduler.alpha.kubernetes.io/affinity: >
+              {
+                "podAntiAffinity": {
+                  "requiredDuringSchedulingIgnoredDuringExecution": [{
+                    "labelSelector": {
+                      "matchExpressions": [{
+                        "key": "app",
+                        "operator": "In",
+                        "values": ["${NAME}"]
+                      }]
+                    },
+                    "topologyKey": "kubernetes.io/hostname"
+                  }]
+                }
+              }
       spec:
         containers:
-        - name: kafkanetes
-          image: ${IMAGESTREAM}
-          command:
-          - bin/kafka-server-start.sh
-          args:
-          - config/server.properties
-          - --override
-          - zookeeper.connect=${ZOOKEEPER_SERVICE}
-          - --override
-          - advertised.host.name=${NAME}
-          - --override
-          - broker.id=0
-          volumeMounts:
-          - mountPath: /tmp/kafka-logs
-            name: kafka-logs
+        - name: ${NAME}
+          imagePullPolicy: Always
+          image: bbvalabs/kafka
+#          resources:
+#            requests:
+#              memory: "2Gi"
+#              cpu: "1"
           ports:
           - containerPort: 9092
-        volumes:
-        - name: kafka-logs
-          persistentVolumeClaim:
-            claimName: ${NAME}
-    triggers:
-    - type: ConfigChange
-    - type: ImageChange
-      imageChangeParams:
-        automatic: false
-        containerNames:
-        - kafkanetes
-        from:
-          kind: ImageStream
-          name: ${IMAGESTREAM}
+            name: broker-port
+          env:
+          - name:  KAFKA_VERSION
+            value: ${KAFKA_VERSION}
+          - name:  SCALA_VERSION
+            value: ${SCALA_VERSION}
+          - name : KAFKA_REPLICAS
+            value: ${SCALE}
+          - name:  KAFKA_ZK_LOCAL
+            value: ${KAFKA_ZK_LOCAL}
+          - name : ZK_HEAP_SIZE
+            value: ${ZK_HEAP_SIZE}
+          - name:  KAFKA_HEAP_OPTS
+            value: ${KAFKA_HEAP_OPTS}
+          - name:  SERVER_NUM_PARTITIONS
+            value: ${SERVER_NUM_PARTITIONS}
+          - name:  SERVER_DELETE_TOPIC_ENABLE
+            value: ${SERVER_DELETE_TOPIC_ENABLE}
+          - name:  SERVER_LOG_RETENTION_HOURS
+            value: ${SERVER_LOG_RETENTION_HOURS}
+          - name:  SERVER_ZOOKEEPER_CONNECT
+            value: ${SERVER_ZOOKEEPER_CONNECT}
+          command:
+          - bash
+          - -c
+          - bin/kafka_start.sh
+          readinessProbe:
+            exec:
+              command:
+              - "bin/kafka_ok.sh"
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+              - "bin/kafka_ok.sh"
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+          volumeMounts:
+          - name: kafka-volume
+            mountPath: /kafka
+#        securityContext:
+#          runAsUser: 1000
+#          fsGroup: 1000
+    volumeClaimTemplates:
+    - metadata:
+        name: kafka-volume
+        annotations:
+          volume.alpha.kubernetes.io/storage-class: anything
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: ${VOLUME_CAPACITY}
 
-- apiVersion: v1
-  kind: Service
-  metadata:
-    name: ${NAME}
-  spec:
-    ports:
-    - port: 9092
-    selector:
-      app: ${NAME}
-      deploymentconfig: ${NAME}

@@ -5,28 +5,30 @@ metadata:
   annotations:
     openshift.io/display-name: Kafka
     description: A distibuted streaming platform
-    iconClass: icon-messaging
+    iconClass: icon-database
     tags: messaging,kafka
-
 labels:
   template: kafka
 
 parameters:
 - name: NAME
   displayName: Name
-  default: kafka
+  required: true
+  value: kafka
 - name: KAFKA_VERSION
   displayName: Kafka Version
-  default: "0.10.1.0"
+  required: true
+  value: "0.10.1.0"
 - name: SCALA_VERSION
   displayName: Scala Version
-  default: "2.11"
+  required: true
+  value: "2.11"
 - name: SCALE
-  description: Number of nodes
+  displayName: Number of nodes
   required: true
   value: "1"
 - name: ZK_HEAP_OPTS
-  description: Zookeeper JVM Heap options
+  displayName: Zookeeper JVM Heap options
   required: true
   value: "-Xmx512M -Xms512M"
 - name: KAFKA_HEAP_OPTS
@@ -44,19 +46,17 @@ parameters:
 - name: SERVER_DELETE_TOPIC_ENABLE
   displayName: Topic deletion enabled
   description: Switch to enable topic deletion or not, default value is false
-  value: 'false'
+  value: "false"
 - name: SERVER_LOG_RETENTION_HOURS
   displayName: Log retention hours
   description: The minimum age of a log file to be eligible for deletion
-  required: true
   value: "168"
 - name: KAFKA_ZK_LOCAL
   description: Wheter you want to start a local zookeeper proccess into the same container
   required: true
-  value: false
+  value: "true"
 - name: SERVER_ZOOKEEPER_CONNECT
   description: Type de zookeeper conection URL. This value takes effect when USE_LOCAL_ZOOKEEPER is false
-  required: true
   value: "localhost:2181"
 - name: VOLUME_CAPACITY
   displayName: Volume capacity
@@ -74,7 +74,7 @@ objects:
       service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
   spec:
     ports:
-    - port: ${SERVER_PORT}
+    - port: 9092
       name: server
     clusterIP: None
     selector:
@@ -142,7 +142,7 @@ objects:
           - name:  SERVER_ZOOKEEPER_CONNECT
             value: ${SERVER_ZOOKEEPER_CONNECT}
           command:
-          - bash
+          - /bin/bash
           - -c
           - bin/kafka_start.sh
           readinessProbe:
@@ -173,4 +173,3 @@ objects:
         resources:
           requests:
             storage: ${VOLUME_CAPACITY}
-

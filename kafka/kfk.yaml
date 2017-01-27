@@ -52,7 +52,7 @@ parameters:
   description: The minimum age of a log file to be eligible for deletion
   value: "168"
 - name: KAFKA_ZK_LOCAL
-  displayName: Use local zookeeper
+  displayName: Use local zookeeper (*USE_LOCAL_ZOOKEEPER)
   description: Wheter you want to start a local zookeeper proccess into the same container
   required: true
   value: "true"

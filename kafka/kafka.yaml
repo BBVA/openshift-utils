@@ -18,11 +18,11 @@ parameters:
 - name: KAFKA_VERSION
   displayName: Kafka Version
   required: true
-  value: "0.10.1.0"
+  value: "0.10.1.1"
 - name: SCALA_VERSION
   displayName: Scala Version
   required: true
-  value: "2.11"
+  value: "2.12"
 - name: SCALE
   displayName: Number of nodes
   required: true
@@ -60,10 +60,14 @@ parameters:
   displayName: Zookeeper conection list
   description: Type de zookeeper conection URL. This value takes effect when USE_LOCAL_ZOOKEEPER is false
   value: "localhost:2181"
-- name: VOLUME_CAPACITY
-  displayName: Volume capacity
+- name: VOLUME_KAFKA_CAPACITY
+  displayName: Kafka logs capacity
   required: true
-  value: "20Gi"
+  value: "10Gi"
+- name: VOLUME_ZK_CAPACITY
+  displayName: Zookeeper data capacity
+  required: true
+  value: "10Gi"
 
 objects:
 - apiVersion: v1
@@ -96,25 +100,42 @@ objects:
         annotations:
           pod.alpha.kubernetes.io/initialized: "true"
           scheduler.alpha.kubernetes.io/affinity: >
-              {
-                "podAntiAffinity": {
-                  "requiredDuringSchedulingIgnoredDuringExecution": [{
-                    "labelSelector": {
-                      "matchExpressions": [{
-                        "key": "app",
-                        "operator": "In",
-                        "values": ["${NAME}"]
-                      }]
-                    },
-                    "topologyKey": "kubernetes.io/hostname"
-                  }]
-                }
+            {
+              "podAntiAffinity": {
+                "requiredDuringSchedulingIgnoredDuringExecution": [{
+                  "labelSelector": {
+                    "matchExpressions": [{
+                      "key": "app",
+                      "operator": "In",
+                      "values": ["${NAME}"]
+                    }]
+                  },
+                  "topologyKey": "kubernetes.io/hostname"
+                }]
               }
+            }
+          pod.alpha.kubernetes.io/init-containers: '[
+             {
+               "name": "remove-lost-found",
+               "image": "busybox",
+               "command": ["rmdir", "/opt/kafka/logs/lost+found", "/opt/kafka/zookeeper/lost+found"],
+               "volumeMounts": [
+                 {
+                   "name": "kafka-logs",
+                   "mountPath": "/opt/kafka/logs"
+                 },
+                 {
+                   "name": "zookeeper-data",
+                   "mountPath": "/opt/kafka/zookeeper"
+                 }
+               ]
+             }
+          ]'
       spec:
         containers:
         - name: ${NAME}
           imagePullPolicy: Always
-          image: bbvalabs/kafka
+          image: bbvalabs/kafka:${SCALA_VERSION}-${KAFKA_VERSION}
 #          resources:
 #            requests:
 #              memory: "2Gi"
@@ -146,32 +167,42 @@ objects:
           command:
           - /bin/bash
           - -c
-          - bin/kafka_start.sh
+          - source bin/kafka_setup.sh && bin/kafka_server.sh start
           readinessProbe:
             exec:
               command:
-              - "bin/kafka_ok.sh"
+              - kafka_server.sh
+              - status
             initialDelaySeconds: 15
             timeoutSeconds: 5
           livenessProbe:
             exec:
               command:
-              - "bin/kafka_ok.sh"
+              - kafka_server.sh
+              - status
             initialDelaySeconds: 15
             timeoutSeconds: 5
           volumeMounts:
-          - name: kafka-volume
-            mountPath: /kafka
-#        securityContext:
-#          runAsUser: 1000
-#          fsGroup: 1000
+          - name: kafka-logs
+            mountPath: /opt/kafka/logs
+          - name: zookeeper-data
+            mountPath: /opt/kafka/zookeeper
     volumeClaimTemplates:
     - metadata:
-        name: kafka-volume
+        name: kafka-logs
         annotations:
           volume.alpha.kubernetes.io/storage-class: anything
       spec:
         accessModes: [ "ReadWriteOnce" ]
         resources:
           requests:
-            storage: ${VOLUME_CAPACITY}
+            storage: ${VOLUME_KAFKA_CAPACITY}
+    - metadata:
+        name: zookeeper-data
+        annotations:
+          volume.alpha.kubernetes.io/storage-class: anything
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: ${VOLUME_ZK_CAPACITY}

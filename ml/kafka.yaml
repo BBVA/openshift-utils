@@ -1,33 +1,33 @@
 kind: Template
 apiVersion: v1
 metadata:
-  name: kafka
+  name: kafka-ml
   annotations:
-    openshift.io/display-name: Kafka
-    description: A zookeer and kafka all-in-one
+    openshift.io/display-name: Kafka-ml
+    description: A distibuted streaming platform (3 nodes zk + kafka)
     iconClass: icon-database
-    tags: messaging,kafka,zookeeper
+    tags: messaging,kafka
 labels:
-  template: kafka
+  template: kafka-ml
 
 parameters:
-- name: NAME
+- name: KAFKA_NAME
   displayName: Name
   required: true
-  value: kafka
+  value: kafka-ml
 - name: KAFKA_VERSION
   displayName: Kafka Version
   required: true
-  value: "0.10.1.0"
-- name: SCALA_VERSION
+  value: "0.10.1.1"
+- name: KAFKA_SCALA_VERSION
   displayName: Scala Version
   required: true
-  value: "2.11"
-- name: SCALE
+  value: "2.12"
+- name: KAFKA_SCALE
   displayName: Number of nodes
   required: true
   value: "1"
-- name: ZK_HEAP_OPTS
+- name: KAFKA_ZK_HEAP_OPTS
   displayName: Zookeeper JVM Heap options
   required: true
   value: "-Xmx512M -Xms512M"
@@ -35,43 +35,107 @@ parameters:
   displayName: Kafka JVM Heap options
   required: true
   value: "-Xmx1G -Xms1G"
-- name: SERVER_NUM_PARTITIONS
+- name: KAFKA_SERVER_NUM_PARTITIONS
   displayName: The default number of log partitions per topic
   description: >
     More partitions allow greater
     parallelism for consumption, but this will also result in more files across
     the brokers
   required: true
-  value: "1"
-- name: SERVER_DELETE_TOPIC_ENABLE
+  value: "64"
+- name: KAFKA_SERVER_DELETE_TOPIC_ENABLE
   displayName: Topic deletion enabled
   description: Switch to enable topic deletion or not, default value is false
-  value: "false"
-- name: SERVER_LOG_RETENTION_HOURS
+  value: "true"
+- name: KAFKA_SERVER_LOG_RETENTION_HOURS
   displayName: Log retention hours
   description: The minimum age of a log file to be eligible for deletion
-  value: "168"
+  value: "60"
 - name: KAFKA_ZK_LOCAL
   displayName: Use local zookeeper (*USE_LOCAL_ZOOKEEPER)
   description: Wheter you want to start a local zookeeper proccess into the same container
   required: true
-  value: "true"
-- name: SERVER_ZOOKEEPER_CONNECT
+  value: "false"
+- name: KAFKA_SERVER_ZOOKEEPER_CONNECT
   displayName: Zookeeper conection list
   description: Type de zookeeper conection URL. This value takes effect when USE_LOCAL_ZOOKEEPER is false
-  value: "localhost:2181"
-- name: VOLUME_CAPACITY
-  displayName: Volume capacity
+  value: "zk-ml-0.zk-ml-svc:2181,zk-ml-1.zk-ml-svc:2181,zk-ml-2.zk-ml-svc:2181"
+- name: VOLUME_KAFKA_CAPACITY
+  displayName: Kafka logs capacity
   required: true
-  value: "20Gi"
+  value: "10Gi"
+- name: ZK_NAME
+  displayName: Name
+  value: zk-ml
+  required: true
+- name: VOLUME_ZK_CAPACITY
+  displayName: Volume Capacity ZK
+  description: Persistent volume capacity per pod, e.g. 512Mi, 2Gi
+  required: true
+  value: 10Gi
+- name: ZOO_TICK_TIME
+  displayName: Tick Time
+  description: The number of milliseconds of each tick
+  required: true
+  value: '2000'
+- name: ZOO_INIT_LIMIT
+  displayName: Init Limit
+  description: The number of ticks that the initial synchronization phase can take
+  required: true
+  value: '10'
+- name: ZOO_SYNC_LIMIT
+  displayName: Sync Limit
+  description: The number of ticks that can pass between sending a request and getting an acknowledgement
+  required: true
+  value: '5'
+- name: ZOO_CLIENT_PORT
+  displayName: Port
+  description: The port at which the clients will connect
+  required: true
+  value: '2181'
+- name: ZOO_SERVER_PORT
+  displayName: Port
+  description: Server Port
+  required: true
+  value: '2888'
+- name: ZOO_ELECTION_PORT
+  displayName: Election Port
+  description: Election
+  required: true
+  value: '3888'
+- name: ZOO_MAX_CLIENT_CNXNS
+  displayName: Maximum number of client connections
+  description: The maximum number of client connections
+  required: true
+  value: '500'
+- name: ZOO_SNAP_RETAIN_COUNT
+  displayName: Number of snapshots to retain in dataDir
+  description: The number of snapshots to retain in dataDir
+  required: true
+  value: '3'
+- name: ZOO_PURGE_INTERVAL
+  displayName: Purge task interval
+  description: Purge task interval in hours. Set to 0 to disable auto purge feature
+  required: true
+  value: '1'
+- name: ZOO_SCALE
+  displayName: Number of nodes
+  description: Number of nodes
+  required: true
+  value: "3"
+- name: ZOO_HEAP_SIZE
+  displayName: JVM heat size
+  description: JVM heat size
+  required: true
+  value: "1G"
 
 objects:
 - apiVersion: v1
   kind: Service
   metadata:
-    name: ${NAME}-svc
+    name: ${KAFKA_NAME}-svc
     labels:
-      app: ${NAME}
+      app: ${KAFKA_NAME}
     annotations:
       service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
   spec:
@@ -80,41 +144,54 @@ objects:
       name: server
     clusterIP: None
     selector:
-      app: ${NAME}
+      app: ${KAFKA_NAME}
 
 - apiVersion: apps/v1alpha1
   kind: PetSet
   metadata:
-    name: ${NAME}
+    name: ${KAFKA_NAME}
   spec:
-    serviceName: ${NAME}-svc
+    serviceName: ${KAFKA_NAME}-svc
     replicas: ${SCALE}
     template:
       metadata:
         labels:
-          app: ${NAME}
+          app: ${KAFKA_NAME}
         annotations:
           pod.alpha.kubernetes.io/initialized: "true"
           scheduler.alpha.kubernetes.io/affinity: >
-              {
-                "podAntiAffinity": {
-                  "requiredDuringSchedulingIgnoredDuringExecution": [{
-                    "labelSelector": {
-                      "matchExpressions": [{
-                        "key": "app",
-                        "operator": "In",
-                        "values": ["${NAME}"]
-                      }]
-                    },
-                    "topologyKey": "kubernetes.io/hostname"
-                  }]
-                }
+            {
+              "podAntiAffinity": {
+                "requiredDuringSchedulingIgnoredDuringExecution": [{
+                  "labelSelector": {
+                    "matchExpressions": [{
+                      "key": "app",
+                      "operator": "In",
+                      "values": ["${KAFKA_NAME}"]
+                    }]
+                  },
+                  "topologyKey": "kubernetes.io/hostname"
+                }]
               }
+            }
+          pod.alpha.kubernetes.io/init-containers: '[
+             {
+               "name": "remove-lost-found",
+               "image": "busybox",
+               "command": ["rmdir", "/opt/kafka/logs/lost+found"],
+               "volumeMounts": [
+                 {
+                   "name": "kafka-logs",
+                   "mountPath": "/opt/kafka/logs"
+                 }
+               ]
+             }
+          ]'
       spec:
         containers:
-        - name: ${NAME}
+        - name: ${KAFKA_NAME}
           imagePullPolicy: Always
-          image: bbvalabs/kafka
+          image: bbvalabs/kafka:${SCALA_VERSION}-${KAFKA_VERSION}
 #          resources:
 #            requests:
 #              memory: "2Gi"
@@ -125,53 +202,172 @@ objects:
           env:
           - name:  KAFKA_VERSION
             value: ${KAFKA_VERSION}
-          - name:  SCALA_VERSION
-            value: ${SCALA_VERSION}
+          - name:  KAFKA_SCALA_VERSION
+            value: ${KAFKA_SCALA_VERSION}
           - name : KAFKA_REPLICAS
-            value: ${SCALE}
+            value: ${KAFKA_SCALE}
           - name:  KAFKA_ZK_LOCAL
             value: ${KAFKA_ZK_LOCAL}
-          - name : ZK_HEAP_SIZE
-            value: ${ZK_HEAP_SIZE}
+          - name : ZK_HEAP_OPTS
+            value: ${ZK_HEAP_OPTS}
           - name:  KAFKA_HEAP_OPTS
             value: ${KAFKA_HEAP_OPTS}
           - name:  SERVER_NUM_PARTITIONS
-            value: ${SERVER_NUM_PARTITIONS}
+            value: ${KAFKA_SERVER_NUM_PARTITIONS}
           - name:  SERVER_DELETE_TOPIC_ENABLE
-            value: ${SERVER_DELETE_TOPIC_ENABLE}
+            value: ${KAFKA_SERVER_DELETE_TOPIC_ENABLE}
           - name:  SERVER_LOG_RETENTION_HOURS
-            value: ${SERVER_LOG_RETENTION_HOURS}
+            value: ${KAFKA_SERVER_LOG_RETENTION_HOURS}
           - name:  SERVER_ZOOKEEPER_CONNECT
-            value: ${SERVER_ZOOKEEPER_CONNECT}
+            value: ${KAFKA_SERVER_ZOOKEEPER_CONNECT}
           command:
           - /bin/bash
           - -c
-          - bin/kafka_start.sh
+          - source bin/kafka_setup.sh && bin/kafka_server.sh start
           readinessProbe:
             exec:
               command:
-              - "bin/kafka_ok.sh"
+              - kafka_server.sh
+              - status
             initialDelaySeconds: 15
             timeoutSeconds: 5
           livenessProbe:
             exec:
               command:
-              - "bin/kafka_ok.sh"
+              - kafka_server.sh
+              - status
             initialDelaySeconds: 15
             timeoutSeconds: 5
           volumeMounts:
-          - name: kafka-volume
-            mountPath: /kafka
-#        securityContext:
-#          runAsUser: 1000
-#          fsGroup: 1000
+          - name: kafka-logs
+            mountPath: /opt/kafka/logs
     volumeClaimTemplates:
     - metadata:
-        name: kafka-volume
+        name: kafka-logs
         annotations:
           volume.alpha.kubernetes.io/storage-class: anything
       spec:
         accessModes: [ "ReadWriteOnce" ]
         resources:
           requests:
-            storage: ${VOLUME_CAPACITY}
+            storage: ${VOLUME_KAFKA_CAPACITY}
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${ZK_NAME}-svc
+    labels:
+      app: ${ZK_NAME}
+    annotations:
+      service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+  spec:
+    ports:
+    - port: ${ZOO_CLIENT_PORT}
+      name: client
+    - port: ${ZOO_SERVER_PORT}
+      name: server
+    - port: ${ZOO_ELECTION_PORT}
+      name: leader-election
+    clusterIP: None
+    selector:
+      app: ${ZK_NAME}
+
+- apiVersion: apps/v1alpha1
+  kind: PetSet
+  metadata:
+    name: ${ZK_NAME}
+  spec:
+    serviceName: ${ZK_NAME}-svc
+    replicas: ${ZOO_SCALE}
+    template:
+      metadata:
+        labels:
+          app: ${ZK_NAME}
+        annotations:
+          pod.alpha.kubernetes.io/initialized: "true"
+          scheduler.alpha.kubernetes.io/affinity: >
+              {
+                "podAntiAffinity": {
+                  "requiredDuringSchedulingIgnoredDuringExecution": [{
+                    "labelSelector": {
+                      "matchExpressions": [{
+                        "key": "app",
+                        "operator": "In",
+                        "values": ["${ZK_NAME}"]
+                      }]
+                    },
+                    "topologyKey": "kubernetes.io/hostname"
+                  }]
+                }
+              }
+      spec:
+        containers:
+        - name: ${ZK_NAME}
+          imagePullPolicy: Always
+          image: bbvalabs/zookeeper
+#          resources:
+#            requests:
+#              memory: "2Gi"
+#              cpu: "1"
+          ports:
+          - containerPort: ${ZOO_CLIENT_PORT}
+            name: client
+          - containerPort: ${ZOO_SERVER_PORT}
+            name: server
+          - containerPort: ${ZOO_ELECTION_PORT}
+            name: leader-election
+          env:
+          - name : ZK_REPLICAS
+            value: "3"
+          - name : ZK_HEAP_SIZE
+            value: ${ZOO_HEAP_SIZE}
+          - name : ZK_TICK_TIME
+            value: ${ZOO_TICK_TIME}
+          - name : ZK_INIT_LIMIT
+            value: ${ZOO_INIT_LIMIT}
+          - name : ZK_SYNC_LIMIT
+            value: ${ZOO_SYNC_LIMIT}
+          - name : ZK_MAX_CLIENT_CNXNS
+            value: ${ZOO_MAX_CLIENT_CNXNS}
+          - name: ZK_SNAP_RETAIN_COUNT
+            value: ${ZOO_SNAP_RETAIN_COUNT}
+          - name: ZK_PURGE_INTERVAL
+            value: ${ZOO_PURGE_INTERVAL}
+          - name: ZK_CLIENT_PORT
+            value: ${ZOO_CLIENT_PORT}
+          - name: ZK_SERVER_PORT
+            value: ${ZOO_SERVER_PORT}
+          - name: ZK_ELECTION_PORT
+            value: ${ZOO_ELECTION_PORT}
+          command:
+          - sh
+          - -c
+          - zkGenConfig.sh && zkServer.sh start-foreground
+          readinessProbe:
+            exec:
+              command:
+              - "zkOk.sh"
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+              - "zkOk.sh"
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+          volumeMounts:
+          - name: datadir
+            mountPath: /var/lib/zookeeper
+#        securityContext:
+#          runAsUser: 1000
+#          fsGroup: 1000
+    volumeClaimTemplates:
+    - metadata:
+        name: datadir
+        annotations:
+          volume.alpha.kubernetes.io/storage-class: anything
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: ${VOLUME_ZK_CAPACITY}

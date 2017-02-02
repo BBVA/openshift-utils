@@ -122,7 +122,7 @@ parameters:
   displayName: Number of nodes
   description: Number of nodes
   required: true
-  value: "3"
+  value: "1"
 - name: ZOO_HEAP_SIZE
   displayName: JVM heat size
   description: JVM heat size

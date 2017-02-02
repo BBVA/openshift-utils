@@ -152,8 +152,8 @@ objects:
             value: ${SCALE}
           - name:  KAFKA_ZK_LOCAL
             value: ${KAFKA_ZK_LOCAL}
-          - name : ZK_HEAP_SIZE
-            value: ${ZK_HEAP_SIZE}
+          - name : ZK_HEAP_OPTS
+            value: ${ZK_HEAP_OPTS}
           - name:  KAFKA_HEAP_OPTS
             value: ${KAFKA_HEAP_OPTS}
           - name:  SERVER_NUM_PARTITIONS

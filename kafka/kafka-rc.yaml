@@ -1,14 +1,14 @@
 kind: Template
 apiVersion: v1
 metadata:
-  name: kafka
+  name: kafka-rc
   annotations:
     openshift.io/display-name: Kafka
     description: A distibuted streaming platform
     iconClass: icon-database
     tags: messaging,kafka
 labels:
-  template: kafka
+  template: kafka-rc
 
 parameters:
 - name: NAME
@@ -52,14 +52,14 @@ parameters:
   description: The minimum age of a log file to be eligible for deletion
   value: "168"
 - name: KAFKA_ZK_LOCAL
-  displayName: Use local zookeeper (*USE_LOCAL_ZOOKEEPER)
+  displayName: Use local zookeeper (*KAFKA_ZK_LOCAL)
   description: Wheter you want to start a local zookeeper proccess into the same container
   required: true
   value: "true"
 - name: SERVER_ZOOKEEPER_CONNECT
   displayName: Zookeeper conection list
-  description: Type de zookeeper conection URL. This value takes effect when USE_LOCAL_ZOOKEEPER is false
-  value: "localhost:2181"
+  description: Type de zookeeper conection URL. This value takes effect when KAFKA_ZK_LOCAL is false
+  required: true
 - name: VOLUME_KAFKA_CAPACITY
   displayName: Kafka logs capacity
   required: true

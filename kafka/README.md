@@ -6,7 +6,7 @@ Kafka cluster deployment
 
 We've got three ways to deploy a kafka cluster :
 
-### Single All-in-one
+### Single All-in-one (zookeeper sidecar)
 
 Both zookeeper and kafka processes running in the same pod.
 
@@ -21,9 +21,10 @@ This env variables are required :
 * KAFKA_ZK_LOCAL=false
 * SERVER_zookeeper_connect=\<your-zookeeper-nodes\>
 
-### Clustered All-in-one
+### Clustered All-in-one (zookeeper cluster sidecar)
 
-A zookeeper cluster with a broker for each one.
+A zookeeper cluster with a kafka broker inside each node.
+
 
 
 

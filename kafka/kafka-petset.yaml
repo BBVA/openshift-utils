@@ -168,13 +168,14 @@ objects:
           - /bin/bash
           - -c
           - source bin/kafka_setup.sh && bin/kafka_server.sh start
-          readinessProbe:
-            exec:
-              command:
-              - kafka_server.sh
-              - status
-            initialDelaySeconds: 15
-            timeoutSeconds: 5
+# TODO: Resolve HostNotFound exception of zookeeper servers while kafka is starting up
+#          readinessProbe:
+#            exec:
+#              command:
+#              - kafka_server.sh
+#              - status
+#            initialDelaySeconds: 15
+#            timeoutSeconds: 5
           livenessProbe:
             exec:
               command:

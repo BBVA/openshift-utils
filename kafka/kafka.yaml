@@ -142,7 +142,7 @@ objects:
 #              cpu: "1"
           ports:
           - containerPort: 9092
-            name: broker-port
+            name: server
           env:
           - name:  KAFKA_VERSION
             value: ${KAFKA_VERSION}
@@ -152,17 +152,17 @@ objects:
             value: ${SCALE}
           - name:  KAFKA_ZK_LOCAL
             value: ${KAFKA_ZK_LOCAL}
-          - name : ZK_HEAP_OPTS
+          - name : ZOO_HEAP_OPTS
             value: ${ZK_HEAP_OPTS}
           - name:  KAFKA_HEAP_OPTS
             value: ${KAFKA_HEAP_OPTS}
-          - name:  SERVER_NUM_PARTITIONS
+          - name:  SERVER_num_partitions
             value: ${SERVER_NUM_PARTITIONS}
-          - name:  SERVER_DELETE_TOPIC_ENABLE
+          - name:  SERVER_delete_topic_enable
             value: ${SERVER_DELETE_TOPIC_ENABLE}
-          - name:  SERVER_LOG_RETENTION_HOURS
+          - name:  SERVER_log_retention_hours
             value: ${SERVER_LOG_RETENTION_HOURS}
-          - name:  SERVER_ZOOKEEPER_CONNECT
+          - name:  SERVER_zookeeper_connect
             value: ${SERVER_ZOOKEEPER_CONNECT}
           command:
           - /bin/bash

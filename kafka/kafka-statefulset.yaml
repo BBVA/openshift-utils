@@ -86,8 +86,8 @@ objects:
     selector:
       app: ${NAME}
 
-- apiVersion: apps/v1alpha1
-  kind: PetSet
+- apiVersion: apps/v1beta1
+  kind: StatefulSet
   metadata:
     name: ${NAME}
   spec:
@@ -98,7 +98,8 @@ objects:
         labels:
           app: ${NAME}
         annotations:
-          pod.alpha.kubernetes.io/initialized: "true"
+          # Use this annotation if you want allocate each pod on different node
+          # Note the number of nodes must be upper than replicas parameter.
           scheduler.alpha.kubernetes.io/affinity: >
             {
               "podAntiAffinity": {
@@ -136,10 +137,10 @@ objects:
         - name: ${NAME}
           imagePullPolicy: Always
           image: bbvalabs/kafka:${SCALA_VERSION}-${KAFKA_VERSION}
-          #resources:
-          #  requests:
-          #    memory: "2Gi"
-          #    cpu: "1"
+          # resources:
+          #   requests:
+          #     memory: "2Gi"
+          #     cpu: "1"
           ports:
           - containerPort: 9092
             name: server
@@ -168,7 +169,7 @@ objects:
           - /bin/bash
           - -c
           - kafka_setup.sh && kafka_server.sh start
-          # TODO: Resolve HostNotFound exception of zookeeper servers while kafka is starting up
+          #TODO: Resolve HostNotFound exception of zookeeper servers while kafka is starting up
           #readinessProbe:
           #  exec:
           #    command:

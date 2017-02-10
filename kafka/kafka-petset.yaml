@@ -167,6 +167,7 @@ objects:
           command:
           - /bin/bash
           - -c
+          #- rm -rf /opt/kafka/logs/lost+found
           - kafka_setup.sh && kafka_server.sh start
           # TODO: Resolve HostNotFound exception of zookeeper servers while kafka is starting up
           #readinessProbe:
@@ -181,13 +182,14 @@ objects:
               command:
               - kafka_server.sh
               - status
-            initialDelaySeconds: 15
-            timeoutSeconds: 5
+            initialDelaySeconds: 18
+            timeoutSeconds: 8
           volumeMounts:
           - name: kafka-logs
             mountPath: /opt/kafka/logs
           - name: zookeeper-data
             mountPath: /opt/kafka/zookeeper
+          restartPolicy: OnFailure
     volumeClaimTemplates:
     - metadata:
         name: kafka-logs

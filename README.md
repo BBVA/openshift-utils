@@ -17,6 +17,10 @@ Template list:
 - [Kafka](kafka)
 - [Zookeeper](zookeeper)
 
+## Local tests
 
+We recommend using ["minishift"](https://www.openshift.org/vm/) , this is the easiest way to have a local Openshift.
+
+The resources with suffix ***local*** have been created in order to check resources in previous production environments.
 
 

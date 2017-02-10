@@ -168,7 +168,7 @@ objects:
           command:
           - /bin/bash
           - -c
-          - kafka_setup.sh && kafka_server.sh start
+          - source kafka_env.sh && kafka_setup.sh && kafka_server.sh start
           #TODO: Resolve HostNotFound exception of zookeeper servers while kafka is starting up
           #readinessProbe:
           #  exec:

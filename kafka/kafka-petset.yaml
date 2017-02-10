@@ -134,7 +134,7 @@ objects:
       spec:
         containers:
         - name: ${NAME}
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           image: bbvalabs/kafka:${SCALA_VERSION}-${KAFKA_VERSION}
           #resources:
           #  requests:
@@ -167,8 +167,7 @@ objects:
           command:
           - /bin/bash
           - -c
-          #- rm -rf /opt/kafka/logs/lost+found
-          - kafka_setup.sh && kafka_server.sh start
+          - source kafka_env.sh && kafka_setup.sh && kafka_server.sh start
           # TODO: Resolve HostNotFound exception of zookeeper servers while kafka is starting up
           #readinessProbe:
           #  exec:

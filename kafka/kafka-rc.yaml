@@ -112,23 +112,10 @@ objects:
                 }]
               }
             }
-          pod.alpha.kubernetes.io/init-containers: '[
-             {
-               "name": "clean-lost-found",
-               "image": "busybox",
-               "command": ["rmdir", "/opt/kafka/logs/lost+found"],
-               "volumeMounts": [
-                 {
-                   "name": "kafka-logs",
-                   "mountPath": "/opt/kafka/logs"
-                 }
-               ]
-             }
-          ]'
       spec:
         containers:
         - name: ${NAME}
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           image: bbvalabs/kafka:${SCALA_VERSION}-${KAFKA_VERSION}
           #resources:
           #  requests:
@@ -158,6 +145,8 @@ objects:
             value: ${SERVER_LOG_RETENTION_HOURS}
           - name:  SERVER_zookeeper_connect
             value: ${SERVER_ZOOKEEPER_CONNECT}
+          - name: SERVER_log_dirs
+            value: "/opt/kafka/data/logs"
           command:
           - /bin/bash
           - -c
@@ -177,11 +166,11 @@ objects:
             initialDelaySeconds: 15
             timeoutSeconds: 5
           volumeMounts:
-          - name: kafka-logs
-            mountPath: /opt/kafka/logs
+          - name: kafka-data
+            mountPath: /opt/kafka/data
     volumeClaimTemplates:
     - metadata:
-        name: kafka-logs
+        name: kafka-data
         annotations:
           volume.alpha.kubernetes.io/storage-class: anything
       spec:

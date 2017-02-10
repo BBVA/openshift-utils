@@ -114,9 +114,9 @@ objects:
             }
           pod.alpha.kubernetes.io/init-containers: '[
              {
-               "name": "clean-mount-paths",
+               "name": "clean-lost-found",
                "image": "busybox",
-               "command": ["rm", "-rf", "/opt/kafka/logs/*"],
+               "command": ["rmdir", "/opt/kafka/logs/lost+found"],
                "volumeMounts": [
                  {
                    "name": "kafka-logs",

@@ -82,6 +82,12 @@ objects:
     ports:
     - port: 9092
       name: server
+    - port: 2181
+      name: zkclient
+    - port: 2888
+      name: zkserver
+    - port: 3888
+      name: zkleader
     clusterIP: None
     selector:
       app: ${NAME}
@@ -126,6 +132,12 @@ objects:
           ports:
           - containerPort: 9092
             name: server
+          - containerPort: 2181
+            name: zkclient
+          - containerPort: 2888
+            name: zkserver
+          - containerPort: 3888
+            name: zkleader
           env:
           - name:  KAFKA_VERSION
             value: ${KAFKA_VERSION}
@@ -149,6 +161,8 @@ objects:
             value: ${SERVER_ZOOKEEPER_CONNECT}
           - name: SERVER_log_dirs
             value: "/opt/kafka/data/logs"
+          - name: SERVER_zookeeper_connection_timeout_ms
+            value: "30000"
           command:
           - /bin/bash
           - -c

@@ -1,14 +1,14 @@
 kind: Template
 apiVersion: v1
 metadata:
-  name: kafka-petset
+  name: kafka-statefulset
   annotations:
-    openshift.io/display-name: Kafka
+    openshift.io/display-name: Kafka Statefulset
     description: A distibuted streaming platform
     iconClass: icon-database
     tags: messaging,kafka
 labels:
-  template: kafka-petset
+  template: kafka-statefulset
 
 parameters:
 - name: NAME

@@ -3,7 +3,7 @@ apiVersion: v1
 metadata:
   name: kafka-petset
   annotations:
-    openshift.io/display-name: Kafka
+    openshift.io/display-name: Kafka Petset
     description: A distibuted streaming platform
     iconClass: icon-database
     tags: messaging,kafka

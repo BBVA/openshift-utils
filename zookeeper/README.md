@@ -20,3 +20,30 @@ Inside the same namespace you also can use this shortened form:
 
 
 > NOTE: Dynamic scaling with replicas number changes is not supported yet, :-(
+
+## Notes
+
+PetSets are available from kubernetes ***1.3***, and from version ***1.5*** they are renamed as StatefulSets.
+
+### Local testing
+
+We recommend to use "minishift" in order to get quickly a ready Openshift deployment.
+
+Check out the Openshift version by typing:
+
+```bash
+$ minishift get-openshift-versions
+$ minishift config get openshift-version
+```
+
+If no version is showed in last command this means that the latest stable version is being used.
+
+Setup the right version in order to use Petsets or StatefulSets:
+
+```bash
+$ minishift config set openshift-version <version>
+$ minishift start
+$ oc create -f <template>-local.yaml
+$ oc new-app <template-name>-local.yaml [-p parameter=value]
+$ minishift console
+```

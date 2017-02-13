@@ -14,6 +14,15 @@ parameters:
   displayName: Name
   value: zk
   required: true
+- name: ZOO_SCALE
+  displayName: Number of nodes
+  description: Number of nodes
+  required: true
+  value: "1"
+- name: ZOO_VERSION
+  displayName: Version
+  value: "3.4.9"
+  required: true
 - name: VOLUME_CAPACITY
   displayName: Volume Capacity
   description: Persistent volume capacity per pod, e.g. 512Mi, 2Gi
@@ -64,16 +73,11 @@ parameters:
   description: Purge task interval in hours. Set to 0 to disable auto purge feature
   required: true
   value: '1'
-- name: ZOO_SCALE
-  displayName: Number of nodes
-  description: Number of nodes
-  required: true
-  value: "1"
 - name: ZOO_HEAP_SIZE
-  displayName: JVM heat size
-  description: JVM heat size
+  displayName: JVM heap size
+  description: JVM heap size
   required: true
-  value: "1G"
+  value: "-Xmx512M -Xms512M"
 
 objects:
 - apiVersion: v1
@@ -91,7 +95,7 @@ objects:
     - port: ${ZOO_SERVER_PORT}
       name: server
     - port: ${ZOO_ELECTION_PORT}
-      name: leader-election
+      name: election
     clusterIP: None
     selector:
       app: ${NAME}
@@ -127,63 +131,65 @@ objects:
         containers:
         - name: ${NAME}
           imagePullPolicy: Always
-          image: bbvalabs/zookeeper
-          # resources:
-          #   requests:
-          #     memory: "2Gi"
-          #     cpu: "1"
+          image: bbvalabs/zookeeper:${ZOO_VERSION}
+          #resources:
+          #  requests:
+          #    memory: "2Gi"
+          #    cpu: "1"
           ports:
           - containerPort: ${ZOO_CLIENT_PORT}
             name: client
           - containerPort: ${ZOO_SERVER_PORT}
             name: server
           - containerPort: ${ZOO_ELECTION_PORT}
-            name: leader-election
+            name: election
           env:
-          - name : ZK_REPLICAS
+          - name : ZOO_REPLICAS
             value: ${ZOO_SCALE}
           - name : ZK_HEAP_SIZE
             value: ${ZOO_HEAP_SIZE}
-          - name : ZK_TICK_TIME
+          - name : ZK_tickTime
             value: ${ZOO_TICK_TIME}
-          - name : ZK_INIT_LIMIT
+          - name : ZK_initLimit
             value: ${ZOO_INIT_LIMIT}
-          - name : ZK_SYNC_LIMIT
+          - name : ZK_syncLimit
             value: ${ZOO_SYNC_LIMIT}
-          - name : ZK_MAX_CLIENT_CNXNS
+          - name : ZK_maxClientCnxns
             value: ${ZOO_MAX_CLIENT_CNXNS}
-          - name: ZK_SNAP_RETAIN_COUNT
+          - name: ZK_autopurge_snapRetainCount
             value: ${ZOO_SNAP_RETAIN_COUNT}
-          - name: ZK_PURGE_INTERVAL
+          - name: ZK_autopurge_purgeInterval
             value: ${ZOO_PURGE_INTERVAL}
-          - name: ZK_CLIENT_PORT
+          - name: ZK_clientPort
             value: ${ZOO_CLIENT_PORT}
-          - name: ZK_SERVER_PORT
+          - name: ZOO_SERVER_PORT
             value: ${ZOO_SERVER_PORT}
-          - name: ZK_ELECTION_PORT
+          - name: ZOO_ELECTION_PORT
             value: ${ZOO_ELECTION_PORT}
+          - name: JAVA_ZK_JVMFLAG
+            value: "\"${ZOO_HEAP_SIZE}\""
           command:
-          - sh
+          - /bin/bash
           - -c
-          - zkGenConfig.sh && zkServer.sh start-foreground
+          - source zk_env.sh && zk_setup.sh && ./zkServer.sh start-foreground
           readinessProbe:
             exec:
               command:
-              - zkOk.sh
+              - zk_status.sh
             initialDelaySeconds: 15
             timeoutSeconds: 5
           livenessProbe:
             exec:
               command:
-              - zkOk.sh
+              - zk_status.sh
             initialDelaySeconds: 15
             timeoutSeconds: 5
           volumeMounts:
           - name: datadir
             mountPath: /var/lib/zookeeper
-          # securityContext:
-          #   runAsUser: 1000
-          #   fsGroup: 1000
+          #securityContext:
+          #  runAsUser: 1000
+          #  fsGroup: 1000
     volumeClaimTemplates:
     - metadata:
         name: datadir

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ClusterRole
+metadata:
+  name: extended-cluster-role
+rules:
+  - resources:
+    - daemonsets
+    apiGroups:
+    - extensions
+    verbs:
+    - create
+    - get
+    - list
+    - watch
+    - delete
+    - update

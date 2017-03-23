@@ -1,6 +1,6 @@
-# MLoOpenshift
+# Openshift Utils
 
-Utilities for ML on Openshift
+Utilities for Openshift
 
 ## Deploy Openshift on Openstack
 

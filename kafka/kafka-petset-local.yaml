@@ -64,14 +64,6 @@ parameters:
     Zookeeper conection list as URL, nodes separated by ','.
     This value takes effect when KAFKA_ZK_LOCAL is false
   value: "localhost:2181"
-- name: VOLUME_KAFKA_CAPACITY
-  description: Kafka logs capacity
-  required: true
-  value: "10Gi"
-- name: VOLUME_ZK_CAPACITY
-  description: Zookeeper data capacity
-  required: true
-  value: "10Gi"
 
 objects:
 - apiVersion: v1

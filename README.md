@@ -17,6 +17,12 @@ Template list:
 - [Kafka](kafka)
 - [Zookeeper](zookeeper)
 
+## Openshift AWS ECRtemplates
+
+Integrate AWS ECR as external docker registry
+
+- [AWS ECR](aws-ecr)
+
 ## Local tests
 
 We recommend using ["minishift"](https://www.openshift.org/vm/) , this is the easiest way to have a local Openshift.

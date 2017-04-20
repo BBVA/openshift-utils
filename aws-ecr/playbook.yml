@@ -1,0 +1,27 @@
+---
+- hosts: masters
+  tasks:
+  - name: Install pip
+    yum:
+      name: python-pip
+      enablerepo: epel
+  - name: Install awscli
+    pip:
+      name: awscli
+      extra_args: --upgrade --user
+  - name: Delete default docker conf
+    file:
+      path: "/root/.docker/config.json"
+      state: absent
+  - name: Copy job script
+    copy:
+      src: /root/oc_secrets.sh
+      dest: /root/oc_secrets.sh
+      owner: root
+      group: root
+      mode: 0755
+  - name: Docker login and create/update secrets
+    cron:
+      name: Docker login and secrets
+      hour: '*/12'
+      job: /root/oc_secrets.sh

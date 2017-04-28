@@ -11,8 +11,11 @@ Openshift cluster deployments are generally based on Ansible, so it will be easy
 This playbook will create a cron job in master nodes (or on any other machine) which generate or update an specific secret and associate it to the suitable service accounts.
 
 ```bash
-$ ansible-playbook [--inventory /var/lib/ansible/os-inventory] aws-ecr-creds-os.yaml
+$ ansible-playbook [--inventory /var/lib/ansible/os-inventory] \
+-e "aws_region=<aws_region> aws_access_key_id=<aws_access_key_id> aws_secret_access_key=<aws_secret_access_key>" \
+aws-ecr-creds-os.yaml
 ```
+> ``NOTE`` AWS Credentials are required:  aws_region , aws_access_key_id , aws_secret_access_key
 
 ## TODO
 

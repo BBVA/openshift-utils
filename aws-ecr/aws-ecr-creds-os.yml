@@ -1,0 +1,39 @@
+---
+- hosts: masters
+  vars:
+    docker_config_home: $HOME/.docker
+    aws_config_home: $HOME/.aws
+  tasks:
+  - name: Install pip
+    yum:
+      name: python-pip
+      enablerepo: epel
+  - name: Install awscli
+    pip:
+      name: awscli
+      extra_args: --upgrade --user
+  - name: Ensure AWS directory
+    file:
+      path: "{{ aws_config_home }}"
+      state: directory
+  - name: Generate AWS cred files
+    template:
+      src: "aws_{{ item }}.j2"
+      dest: "{{ aws_config_home }}/{{ item }}"
+    with_items:
+    - config
+    - credentials
+  - name: Copy job script
+    copy:
+      src: oc_secrets.sh
+      dest: $HOME/oc_secrets.sh
+      owner: root
+      group: root
+      mode: 0755
+  - name: Execute AWS ECR login and configure secrets on Openshift
+    shell: $HOME/oc_secrets.sh > $HOME/aws-creds-oc-"$(date +%F-%H%M%S)".log 2>&1
+  - cron:
+      name: Docker login on AWS ECR and secrets on Openshift every 12h (two attempts)
+      minute: 1,10
+      hour: '*/12'
+      job: $HOME/oc_secrets.sh >> $HOME/aws-creds-oc-cronjob-"$(date +%F-%H%M%S)".log 2>&1

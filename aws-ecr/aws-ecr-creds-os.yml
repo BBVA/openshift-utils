@@ -36,4 +36,4 @@
       name: Docker login on AWS ECR and secrets on Openshift every 12h (two attempts)
       minute: 1,10
       hour: '*/12'
-      job: $HOME/oc_secrets.sh >> $HOME/aws-creds-oc-cronjob-"$(date +%F-%H%M%S)".log 2>&1
+      job: $HOME/oc_secrets.sh >> $HOME/aws-creds-oc-cronjob.log 2>&1

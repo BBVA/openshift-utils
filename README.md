@@ -27,6 +27,6 @@ Integrate AWS ECR as external docker registry
 
 We recommend using ["minishift"](https://www.openshift.org/vm/) , this is the easiest way to have a local Openshift.
 
-The resources with suffix ***local*** have been created in order to check resources in previous production environments.
+The resources with suffix ***local*** have been created in order to be launched on previous production environments (in your localhost, for instance).
 
 

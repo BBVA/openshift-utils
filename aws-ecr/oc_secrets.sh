@@ -10,7 +10,7 @@ SECRET_FILE=/root/secret-aws-ecr.yml
 
 # AWS ECR Login
 log "Executing AWS ECR Login"
-$(aws ecr get-login)
+$(aws ecr get-login --no-include-email)
 log "New AWS ECR token generated."
 
 # Replace secret value

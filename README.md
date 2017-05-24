@@ -17,7 +17,7 @@ Template list:
 - [Kafka](kafka)
 - [Zookeeper](zookeeper)
 
-## Openshift AWS ECRtemplates
+## Openshift AWS ECR
 
 Integrate AWS ECR as external docker registry
 

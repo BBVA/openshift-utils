@@ -8,7 +8,7 @@ Using AWS ECR autologin within Openshift.
 
 Openshift cluster deployments are generally based on Ansible, so it will be easy to add a new playbook.
 
-This playbook will create a cron job in master nodes (or on any other machine) which generate or update an specific secret and associate it to the suitable service accounts.
+This playbook will create a cron job in master nodes (or on any other machine) which generates or updates an specific secret and associate it to the suitable service accounts.
 
 ```bash
 $ ansible-playbook [--inventory /var/lib/ansible/os-inventory] \

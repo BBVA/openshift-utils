@@ -2,7 +2,7 @@
 
 Kafka cluster deployment.
 
-The resources found here are template for Openshift catalog.
+The resources found here are templates for Openshift catalog.
 
 ## Topologies
 

@@ -1,0 +1,132 @@
+kind: Template
+apiVersion: v1
+metadata:
+  name: tf-gpu
+  annotations:
+    openshift.io/display-name: Tensorflow
+    description: Tensorflow
+labels:
+  template: tf-gpu
+
+parameters:
+- name: NAME
+  description: Name
+  required: true
+  value: tf-gpu
+- name: VERSION
+  description: Version
+  required: true
+  value: "latest"
+- name: NVIDIA_DRIVER_HOME_PATH
+  description: NVIDIA Driver home path
+  required: true
+  value: "/var/lib/nvidia-docker/volumes/nvidia_driver/375.26"
+- name: NVIDIA_HOME_PATH
+  description: NVIDIA home path
+  required: true
+  value: "/usr/lib64/nvidia"
+- name: RESOURCE_MEMORY_REQ
+  description: The memory resource request.
+  value: "1Gi"
+- name: RESOURCE_MEMORY_LIMIT
+  description: The limits for memory resource.
+  value: "2Gi"
+- name: RESOURCE_CPU_REQ
+  description: The CPU resource request.
+  value: "1"
+- name: RESOURCE_CPU_LIMIT
+  description: The limits for CPU resource.
+  value: "1"
+- name: RESOURCE_GPU_REQ
+  description: The GPU resource request.
+  value: "1"
+- name: RESOURCE_GPU_LIMIT
+  description: The limits for GPU resource.
+  value: "1"
+
+
+objects:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${NAME}
+    labels:
+      app: ${NAME}
+  spec:
+    ports:
+    - port: 8888
+      name: ipython
+    - port: 6006
+      name: tensorboard
+    clusterIP: None
+    selector:
+      app: ${NAME}
+
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    name: ${NAME}
+    labels:
+      app: ${NAME}
+  spec:
+    containers:
+    - name: ${NAME}
+      imagePullPolicy: IfNotPresent
+      image: gcr.io/tensorflow/tensorflow:${VERSION}-gpu
+      command:
+      - /bin/bash
+      - -c
+      args:
+      - "tensorboard --logdir /tmp/tensorboard --host 0.0.0.0 --port 6006 & jupyter notebook --allow-root"
+      resources:
+        requests:
+          memory: ${RESOURCE_MEMORY_REQ}
+          cpu: ${RESOURCE_CPU_REQ}
+          alpha.kubernetes.io/nvidia-gpu: ${RESOURCE_GPU_REQ}
+        limits:
+          memory: ${RESOURCE_MEMORY_LIMIT}
+          cpu: ${RESOURCE_CPU_LIMIT}
+          alpha.kubernetes.io/nvidia-gpu: ${RESOURCE_GPU_LIMIT}
+      ports:
+      - containerPort: 8888
+        name: ipython
+      - containerPort: 6006
+        name: tensorboard
+      readinessProbe:
+        tcpSocket:
+          port: 8888
+        timeoutSeconds: 2
+      livenessProbe:
+        tcpSocket:
+          port: 8888
+        initialDelaySeconds: 3
+        timeoutSeconds: 5
+      volumeMounts:
+      - name: nvidia-driver-375-26
+        mountPath: /usr/local/nvidia
+        readOnly: true
+      - name: libcuda-so
+        mountPath: /usr/lib/x86_64-linux-gnu/libcuda.so
+      - name: libcuda-so-1
+        mountPath: /usr/lib/x86_64-linux-gnu/libcuda.so.1
+      - name: libcuda-so-375-51
+        mountPath: /usr/lib/x86_64-linux-gnu/libcuda.so.375.51
+      - name: libcuda-so-fatbinaryloader-375-51
+        mountPath: /usr/lib/x86_64-linux-gnu/libnvidia-fatbinaryloader.so.375.51
+    restartPolicy: Never
+    volumes:
+    - name: nvidia-driver-375-26
+      hostPath:
+        path: ${NVIDIA_DRIVER_HOME_PATH}
+    - name: libcuda-so
+      hostPath:
+        path: ${NVIDIA_HOME_PATH}/libcuda.so
+    - name: libcuda-so-1
+      hostPath:
+        path: ${NVIDIA_HOME_PATH}/libcuda.so.1
+    - name: libcuda-so-375-51
+      hostPath:
+        path: ${NVIDIA_HOME_PATH}/libcuda.so.375.51
+    - name: libcuda-so-fatbinaryloader-375-51
+      hostPath:
+        path: ${NVIDIA_HOME_PATH}/libnvidia-fatbinaryloader.so.375.51

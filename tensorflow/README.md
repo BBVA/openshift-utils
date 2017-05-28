@@ -36,7 +36,17 @@ $ oc expose svc/<NAME> --name tf-jupyter --port ipython
 $ oc expose svc/<NAME> --name tf-board --port tensorboard
 ```
 
+## GPU
 
+When somebody wants to create a tensorflow pod with GPU it will be necessary to have 'privileged' permission granted.
+Contact your admin and ask for adding this security context constraint (scc) to your user:
+
+```bash
+$ oc adm policy add-scc-to-user privileged <user>
+```
+
+In the template 'tf-gpu-template.yaml' we've provided a default paths of the our nvidia drivers,
+feel free to adjust the suitable values according your Openshift nodes and GPUs.
 
 
 

@@ -16,6 +16,7 @@ Template list:
 
 - [Kafka](kafka)
 - [Zookeeper](zookeeper)
+- [Tensorflow](tensorflow)
 
 ## Openshift AWS ECR
 

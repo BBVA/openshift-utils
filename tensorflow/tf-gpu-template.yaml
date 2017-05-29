@@ -113,6 +113,8 @@ objects:
         mountPath: /usr/lib/x86_64-linux-gnu/libcuda.so.375.51
       - name: libcuda-so-fatbinaryloader-375-51
         mountPath: /usr/lib/x86_64-linux-gnu/libnvidia-fatbinaryloader.so.375.51
+      securityContext:
+        privileged: true
     restartPolicy: Never
     volumes:
     - name: nvidia-driver-375-26

@@ -17,10 +17,14 @@ parameters:
   description: Version
   required: true
   value: "latest"
+- name: NVIDIA_DRIVER_VERSION
+  description: NVIDIA Driver version
+  required: true
+  value: "375.51"
 - name: NVIDIA_DRIVER_HOME_PATH
   description: NVIDIA Driver home path
   required: true
-  value: "/var/lib/nvidia-docker/volumes/nvidia_driver/375.26"
+  value: "/var/lib/nvidia-docker/volumes/nvidia_driver"
 - name: NVIDIA_HOME_PATH
   description: NVIDIA home path
   required: true
@@ -102,33 +106,28 @@ objects:
         initialDelaySeconds: 3
         timeoutSeconds: 5
       volumeMounts:
-      - name: nvidia-driver-375-26
+      - name: nvidia-driver
         mountPath: /usr/local/nvidia
         readOnly: true
       - name: libcuda-so
         mountPath: /usr/lib/x86_64-linux-gnu/libcuda.so
       - name: libcuda-so-1
         mountPath: /usr/lib/x86_64-linux-gnu/libcuda.so.1
-      - name: libcuda-so-375-51
-        mountPath: /usr/lib/x86_64-linux-gnu/libcuda.so.375.51
-      - name: libcuda-so-fatbinaryloader-375-51
-        mountPath: /usr/lib/x86_64-linux-gnu/libnvidia-fatbinaryloader.so.375.51
+      - name: libcuda-so-driver-version
+        mountPath: /usr/lib/x86_64-linux-gnu/libcuda.so.${NVIDIA_DRIVER_VERSION}
       securityContext:
         privileged: true
     restartPolicy: Never
     volumes:
-    - name: nvidia-driver-375-26
+    - name: nvidia-driver
       hostPath:
-        path: ${NVIDIA_DRIVER_HOME_PATH}
+        path: ${NVIDIA_DRIVER_HOME_PATH}/${NVIDIA_DRIVER_VERSION}
     - name: libcuda-so
       hostPath:
         path: ${NVIDIA_HOME_PATH}/libcuda.so
     - name: libcuda-so-1
       hostPath:
         path: ${NVIDIA_HOME_PATH}/libcuda.so.1
-    - name: libcuda-so-375-51
+    - name: libcuda-so-driver-version
       hostPath:
-        path: ${NVIDIA_HOME_PATH}/libcuda.so.375.51
-    - name: libcuda-so-fatbinaryloader-375-51
-      hostPath:
-        path: ${NVIDIA_HOME_PATH}/libnvidia-fatbinaryloader.so.375.51
+        path: ${NVIDIA_HOME_PATH}/libcuda.so.${NVIDIA_DRIVER_VERSION}

@@ -116,7 +116,7 @@ objects:
       - name: libcuda-so-driver-version
         mountPath: /usr/lib/x86_64-linux-gnu/libcuda.so.${NVIDIA_DRIVER_VERSION}
       securityContext:
-        privileged: true
+        privileged: 'true'
     restartPolicy: Never
     volumes:
     - name: nvidia-driver

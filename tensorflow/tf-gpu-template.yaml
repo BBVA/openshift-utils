@@ -31,21 +31,27 @@ parameters:
   value: "/usr/lib64/nvidia"
 - name: RESOURCE_MEMORY_REQ
   description: The memory resource request.
+  required: true
   value: "1Gi"
 - name: RESOURCE_MEMORY_LIMIT
   description: The limits for memory resource.
+  required: true
   value: "2Gi"
 - name: RESOURCE_CPU_REQ
   description: The CPU resource request.
+  required: true
   value: "1"
 - name: RESOURCE_CPU_LIMIT
   description: The limits for CPU resource.
+  required: true
   value: "1"
 - name: RESOURCE_GPU_REQ
   description: The GPU resource request.
+  required: true
   value: "1"
 - name: RESOURCE_GPU_LIMIT
   description: The limits for GPU resource.
+  required: true
   value: "1"
 
 

@@ -1,7 +1,7 @@
 kind: Template
 apiVersion: v1
 metadata:
-  name: kafka-statefulset
+  name: kafka
   annotations:
     openshift.io/display-name: Kafka Statefulset
     description: A distibuted streaming platform
@@ -18,7 +18,7 @@ parameters:
 - name: KAFKA_VERSION
   description: Kafka Version
   required: true
-  value: "0.10.2.0"
+  value: "0.10.2.1"
 - name: SCALA_VERSION
   description: Scala Version
   required: true

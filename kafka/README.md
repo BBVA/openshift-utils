@@ -19,7 +19,7 @@ This topology is ver useful for developers or testing purposes.
 
 ```bash
 $ oc create -f kafka-petset.yaml
-$ oc new-app kafka-petset -p SCALE=1
+$ oc new-app kafka -p SCALE=1
 ```
 
 You may use the Openshift dashboard if you prefer to do that from a web interface.
@@ -65,7 +65,7 @@ Setup the right version in order to use Petsets or StatefulSets:
 $ minishift config set openshift-version <version>
 $ minishift start
 $ oc create -f <template>-local.yaml
-$ oc new-app <template-name>-local.yaml [-p parameter=value]
+$ oc new-app kafka [-p parameter=value]
 $ minishift console
 ```
 

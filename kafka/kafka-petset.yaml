@@ -200,9 +200,9 @@ objects:
             mountPath: /opt/kafka/data
           - name: zookeeper-data
             mountPath: /opt/kafka/zookeeper
-          securityContext:
-            runAsUser: 1000
-            fsGroup: 1000
+#          securityContext:
+#            runAsUser: 10000
+#            fsGroup: 10000
     volumeClaimTemplates:
     - metadata:
         name: kafka-data

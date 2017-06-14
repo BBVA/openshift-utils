@@ -78,6 +78,18 @@ parameters:
   description: JVM heap size
   required: true
   value: "-Xmx512M -Xms512M"
+- name: RESOURCE_MEMORY_REQ
+  description: The memory resource request.
+  value: "1Gi"
+- name: RESOURCE_MEMORY_LIMIT
+  description: The limits for memory resource.
+  value: "2Gi"
+- name: RESOURCE_CPU_REQ
+  description: The CPU resource request.
+  value: "1"
+- name: RESOURCE_CPU_LIMIT
+  description: The limits for CPU resource.
+  value: "2"
 
 objects:
 - apiVersion: v1
@@ -133,10 +145,13 @@ objects:
         - name: ${NAME}
           imagePullPolicy: Always
           image: bbvalabs/zookeeper:${ZOO_VERSION}
-          #resources:
-          #  requests:
-          #    memory: "2Gi"
-          #    cpu: "1"
+          resources:
+            requests:
+              memory: ${RESOURCE_MEMORY_REQ}
+              cpu: ${RESOURCE_CPU_REQ}
+            limits:
+              memory: ${RESOURCE_MEMORY_LIMIT}
+              cpu: ${RESOURCE_CPU_LIMIT}
           ports:
           - containerPort: ${ZOO_CLIENT_PORT}
             name: client
@@ -188,9 +203,9 @@ objects:
           volumeMounts:
           - name: datadir
             mountPath: /var/lib/zookeeper
-          #securityContext:
-          #  runAsUser: 1000
-          #  fsGroup: 1000
+          securityContext:
+            runAsUser: 1000
+            fsGroup: 1000
     volumeClaimTemplates:
     - metadata:
         name: datadir

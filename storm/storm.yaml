@@ -1,0 +1,80 @@
+kind: Template
+apiVersion: v1
+metadata:
+  name: storm
+  annotations:
+    openshift.io/display-name: Storm
+    description: An example of a replicated Storm server
+    iconClass: icon-database
+    tags: database,storm
+labels:
+  template: storm
+parameters:
+- name: NAME
+  displayName: Name
+  value: storm
+  required: true
+- name: REPLICAS
+  description: Number of replicas
+  required: true
+  value: "1"
+- name: VERSION
+  displayName: Version
+  value: "1.1.0"
+  required: true
+- name: RESOURCE_MEMORY_REQ
+  description: The memory resource request.
+  value: "1Gi"
+- name: RESOURCE_MEMORY_LIMIT
+  description: The limits for memory resource.
+  value: "1Gi"
+- name: RESOURCE_CPU_REQ
+  description: The CPU resource request.
+  value: "1"
+- name: RESOURCE_CPU_LIMIT
+  description: The limits for CPU resource.
+  value: "1"
+
+objects:
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    name: ${NAME}
+  labels:
+    app: ${NAME}
+  spec:
+    triggers:
+      - type: ConfigChange
+    replicas: ${REPLICAS}
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+      spec:
+        containers:
+          - name: ${NAME}
+            image: 'bbvalabs/storm:${VERSION}'
+            ports:
+              - hostPort: 6700
+                containerPort: 6700
+                protocol: TCP
+              - hostPort: 6701
+                containerPort: 6701
+                protocol: TCP
+              - hostPort: 6702
+                containerPort: 6702
+                protocol: TCP
+              - hostPort: 6703
+                containerPort: 6703
+                protocol: TCP
+            resources:
+              requests:
+                memory: ${RESOURCE_MEMORY_REQ}
+                cpu: ${RESOURCE_CPU_REQ}
+              limits:
+                memory: ${RESOURCE_MEMORY_LIMIT}
+                cpu: ${RESOURCE_CPU_LIMIT}
+            terminationMessagePath: /dev/termination-log
+            imagePullPolicy: IfNotPresent
+        restartPolicy: Always
+        terminationGracePeriodSeconds: 30

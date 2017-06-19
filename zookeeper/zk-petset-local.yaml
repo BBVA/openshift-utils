@@ -78,7 +78,7 @@ objects:
 - apiVersion: v1
   kind: Service
   metadata:
-    name: ${NAME}-svc
+    name: ${NAME}
     labels:
       app: ${NAME}
     annotations:
@@ -100,7 +100,7 @@ objects:
   metadata:
     name: ${NAME}
   spec:
-    serviceName: ${NAME}-svc
+    serviceName: ${NAME}
     replicas: ${ZOO_SCALE}
     template:
       metadata:
@@ -111,7 +111,7 @@ objects:
       spec:
         containers:
         - name: ${NAME}
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           image: bbvalabs/zookeeper:${ZOO_VERSION}
           ports:
           - containerPort: ${ZOO_CLIENT_PORT}

@@ -69,7 +69,7 @@ objects:
 - apiVersion: v1
   kind: Service
   metadata:
-    name: ${NAME}-svc
+    name: ${NAME}
     labels:
       app: ${NAME}
     annotations:
@@ -95,7 +95,7 @@ objects:
     labels:
       app: ${NAME}
   spec:
-    serviceName: ${NAME}-svc
+    serviceName: ${NAME}
     replicas: ${SCALE}
     template:
       metadata:
@@ -104,7 +104,7 @@ objects:
       spec:
         containers:
         - name: ${NAME}
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           image: bbvalabs/kafka:${SCALA_VERSION}-${KAFKA_VERSION}
           ports:
           - containerPort: 9092

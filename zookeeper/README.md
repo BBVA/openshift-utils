@@ -19,7 +19,7 @@ Inside the same namespace you also can use this shortened form:
 `zk-<i>.zk-svc`
 
 
-> NOTE: Dynamic scaling with replicas number changes is not supported yet, :-(
+> NOTE: Dynamic scaling up or down is not supported yet, :-(
 
 ## Notes
 

@@ -21,7 +21,7 @@ parameters:
   value: "1"
 - name: ZOO_VERSION
   displayName: Version
-  value: "3.4.9"
+  value: "3.4.10"
   required: true
 - name: VOLUME_CAPACITY
   displayName: Volume Capacity

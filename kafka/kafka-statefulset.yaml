@@ -71,7 +71,7 @@ parameters:
 - name: VOLUME_ZK_CAPACITY
   description: Zookeeper data capacity
   required: true
-  value: "10Gi"
+  value: "1Gi"
 - name: RESOURCE_MEMORY_REQ
   description: The memory resource request.
   value: "1Gi"

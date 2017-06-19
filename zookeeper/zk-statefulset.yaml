@@ -27,7 +27,7 @@ parameters:
   displayName: Volume Capacity
   description: Persistent volume capacity per pod, e.g. 512Mi, 2Gi
   required: true
-  value: 10Gi
+  value: 1Gi
 - name: ZOO_TICK_TIME
   displayName: Tick Time
   description: The number of milliseconds of each tick

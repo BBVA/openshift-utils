@@ -17,6 +17,7 @@ Template list:
 - [Kafka](kafka)
 - [Zookeeper](zookeeper)
 - [Tensorflow](tensorflow)
+- [Storm](storm)
 
 ## Openshift AWS ECR
 
@@ -26,7 +27,7 @@ Integrate AWS ECR as external docker registry
 
 ## Local tests
 
-We recommend using ["minishift"](https://www.openshift.org/vm/) , this is the easiest way to have a local Openshift.
+The "oc" client by itself can be used to create a localclusterWe recommend using the ""["minishift"](https://www.openshift.org/vm/) , this is the easiest way to have a local Openshift.
 
 The resources with suffix ***local*** have been created in order to be launched on previous production environments (in your localhost, for instance).
 

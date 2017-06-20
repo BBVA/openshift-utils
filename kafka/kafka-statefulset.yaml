@@ -64,6 +64,14 @@ parameters:
     Zookeeper conection list as URL, nodes separated by ','.
     This value takes effect when KAFKA_ZK_LOCAL is false
   value: "localhost:2181"
+- name: SERVER_ZOOKEEPER_CONNECT_TIMEOUT
+  description: >
+    The max time that the client waits to establish a connection to zookeeper (ms).
+  value: "6000"
+- name: LP_INITIAL_DELAY
+  description: >
+    LivenessProbe initial delay in seconds.
+  value: "30"
 - name: VOLUME_KAFKA_CAPACITY
   description: Kafka logs capacity
   required: true
@@ -181,10 +189,10 @@ objects:
             value: ${SERVER_LOG_RETENTION_HOURS}
           - name:  SERVER_zookeeper_connect
             value: ${SERVER_ZOOKEEPER_CONNECT}
-          - name: SERVER_log_dirs
+          - name:  SERVER_log_dirs
             value: "/opt/kafka/data/logs"
-          - name: SERVER_zookeeper_connection_timeout_ms
-            value: "30000"
+          - name:  SERVER_zookeeper_connection_timeout_ms
+            value: ${SERVER_ZOOKEEPER_CONNECT_TIMEOUT}
           #TODO: Resolve HostNotFound exception of zookeeper servers while kafka is starting up
           #readinessProbe:
           #  exec:
@@ -196,7 +204,7 @@ objects:
             exec:
               command:
               - kafka_server_status.sh
-            initialDelaySeconds: 15
+            initialDelaySeconds: ${LP_INITIAL_DELAY}
             timeoutSeconds: 5
           volumeMounts:
           - name: kafka-data

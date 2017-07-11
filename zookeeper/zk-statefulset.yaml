@@ -183,10 +183,6 @@ objects:
             value: ${ZOO_ELECTION_PORT}
           - name: JAVA_ZK_JVMFLAG
             value: "\"${ZOO_HEAP_SIZE}\""
-          command:
-          - /bin/bash
-          - -c
-          - source zk_env.sh && zk_setup.sh && ./zkServer.sh start-foreground
           readinessProbe:
             exec:
               command:

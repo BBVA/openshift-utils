@@ -1,6 +1,6 @@
 # Openshift Utils
 
-Utilities for Openshift
+Utilities and resources for Openshift
 
 ## Deploy Openshift on Openstack
 
@@ -24,11 +24,5 @@ Template list:
 Integrate AWS ECR as external docker registry
 
 - [AWS ECR](aws-ecr)
-
-## Local tests
-
-The "oc" client by itself can be used to create a localclusterWe recommend using the ""["minishift"](https://www.openshift.org/vm/) , this is the easiest way to have a local Openshift.
-
-The resources with suffix ***local*** have been created in order to be launched on previous production environments (in your localhost, for instance).
 
 

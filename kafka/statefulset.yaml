@@ -3,13 +3,13 @@ apiVersion: v1
 metadata:
   name: kafka
   annotations:
-    openshift.io/display-name: Kafka Statefulset
-    description: A distibuted streaming platform
+    openshift.io/display-name: Kafka [+Zookeeper] (Ephemeral)
+    description: Deploy a Kafka cluster, an optional zookeeper could be deployed too.
     iconClass: icon-database
     tags: messaging,kafka
 labels:
-  template: kafka-statefulset
-
+  template: kafka
+  component: kafka
 parameters:
 - name: NAME
   description: Name
@@ -18,13 +18,17 @@ parameters:
 - name: KAFKA_VERSION
   description: Kafka Version
   required: true
-  value: "0.11.0.0"
+  value: "0.10.2.1"
 - name: SCALA_VERSION
   description: Scala Version
   required: true
   value: "2.12"
-- name: SCALE
-  description: Number of nodes
+- name: SOURCE_IMAGE
+  description: Container image source
+  value: engapa/kafka
+  required: true
+- name: REPLICAS
+  description: Number of replicas
   required: true
   value: "1"
 - name: ZK_HEAP_OPTS
@@ -34,7 +38,7 @@ parameters:
 - name: KAFKA_HEAP_OPTS
   description: Kafka JVM Heap options
   required: true
-  value: "-Xmx1G -Xms1G"
+  value: "-Xmx1448M -Xms1448M"
 - name: SERVER_NUM_PARTITIONS
   description: >
     The default number of log partitions per topic.
@@ -47,23 +51,44 @@ parameters:
   description: >
     Topic deletion enabled.
     Switch to enable topic deletion or not, default value is false
-  value: "false"
+  value: "true"
 - name: SERVER_LOG_RETENTION_HOURS
   description: >
     Log retention hours.
     The minimum age of a log file to be eligible for deletion
-  value: "168"
+  value: "40"
 - name: KAFKA_ZK_LOCAL
   description: >
     Use local zookeeper (*KAFKA_ZK_LOCAL).
-    Wheter you want to start a local zookeeper proccess into the same container
+    Whether you want to start a local zookeeper process into the same container
   required: true
   value: "true"
 - name: SERVER_ZOOKEEPER_CONNECT
   description: >
-    Zookeeper conection list as URL, nodes separated by ','.
+    Zookeeper connection list as URL, nodes separated by ','.
     This value takes effect when KAFKA_ZK_LOCAL is false
   value: "localhost:2181"
+- name: SERVER_ZOOKEEPER_CONNECT_TIMEOUT
+  description: >
+    The max time that the client waits to establish a connection to zookeeper (ms).
+  value: "6000"
+  required: true
+- name: RESOURCE_MEMORY_REQ
+  description: The memory resource request.
+  value: "2Gi"
+- name: RESOURCE_MEMORY_LIMIT
+  description: The limits for memory resource.
+  value: "2Gi"
+- name: RESOURCE_CPU_REQ
+  description: The CPU resource request.
+  value: "1"
+- name: RESOURCE_CPU_LIMIT
+  description: The limits for CPU resource.
+  value: "2"
+- name: LP_INITIAL_DELAY
+  description: >
+    LivenessProbe initial delay in seconds.
+  value: "30"
 
 objects:
 - apiVersion: v1
@@ -71,7 +96,7 @@ objects:
   metadata:
     name: ${NAME}
     labels:
-      app: ${NAME}
+      kafka-name: ${NAME}
     annotations:
       service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
   spec:
@@ -86,26 +111,35 @@ objects:
       name: zkleader
     clusterIP: None
     selector:
-      app: ${NAME}
-
+      kafka-name: ${NAME}
 - apiVersion: apps/v1beta1
   kind: StatefulSet
   metadata:
     name: ${NAME}
     labels:
-      app: ${NAME}
+      kafka-name: ${NAME}
   spec:
+    podManagementPolicy: "Parallel"
     serviceName: ${NAME}
-    replicas: ${SCALE}
+    replicas: ${REPLICAS}
     template:
       metadata:
         labels:
-          app: ${NAME}
+          kafka-name: ${NAME}
+          template: kafka
+          component: kafka
       spec:
         containers:
         - name: ${NAME}
           imagePullPolicy: IfNotPresent
-          image: bbvalabs/kafka:${SCALA_VERSION}-${KAFKA_VERSION}
+          image: ${SOURCE_IMAGE}:${SCALA_VERSION}-${KAFKA_VERSION}
+          resources:
+            requests:
+              memory: ${RESOURCE_MEMORY_REQ}
+              cpu: ${RESOURCE_CPU_REQ}
+            limits:
+              memory: ${RESOURCE_MEMORY_LIMIT}
+              cpu: ${RESOURCE_CPU_LIMIT}
           ports:
           - containerPort: 9092
             name: server
@@ -121,7 +155,7 @@ objects:
           - name:  SCALA_VERSION
             value: ${SCALA_VERSION}
           - name : KAFKA_REPLICAS
-            value: ${SCALE}
+            value: ${REPLICAS}
           - name:  KAFKA_ZK_LOCAL
             value: ${KAFKA_ZK_LOCAL}
           - name : ZOO_HEAP_OPTS
@@ -136,11 +170,11 @@ objects:
             value: ${SERVER_LOG_RETENTION_HOURS}
           - name:  SERVER_zookeeper_connect
             value: ${SERVER_ZOOKEEPER_CONNECT}
-          - name: SERVER_zookeeper_connection_timeout_ms
-            value: "30000"
+          - name:  SERVER_zookeeper_connection_timeout_ms
+            value: ${SERVER_ZOOKEEPER_CONNECT_TIMEOUT}
           livenessProbe:
             exec:
               command:
               - kafka_server_status.sh
-            initialDelaySeconds: 15
+            initialDelaySeconds: ${LP_INITIAL_DELAY}
             timeoutSeconds: 5

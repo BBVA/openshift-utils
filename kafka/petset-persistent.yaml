@@ -1,15 +1,15 @@
 kind: Template
 apiVersion: v1
 metadata:
-  name: kafka-petset
+  name: kafka-persistent
   annotations:
-    openshift.io/display-name: Kafka Petset
-    description: A distibuted streaming platform
+    openshift.io/display-name: Kafka (Persistent)
+    description: Create a Kafka cluster, with persistent storage.
     iconClass: icon-database
     tags: messaging,kafka
 labels:
-  template: kafka-petset
-
+  template: kafka-persistent
+  component: kafka
 parameters:
 - name: NAME
   description: Name
@@ -18,23 +18,23 @@ parameters:
 - name: KAFKA_VERSION
   description: Kafka Version
   required: true
-  value: "0.11.0.0"
+  value: "0.10.2.1"
 - name: SCALA_VERSION
   description: Scala Version
   required: true
   value: "2.12"
-- name: SCALE
-  description: Number of nodes
+- name: SOURCE_IMAGE
+  description: Container image source
+  value: engapa/kafka
   required: true
-  value: "1"
-- name: ZK_HEAP_OPTS
-  description: Zookeeper JVM Heap options
+- name: REPLICAS
+  description: Number of replicas
   required: true
-  value: "-Xmx512M -Xms512M"
+  value: "3"
 - name: KAFKA_HEAP_OPTS
   description: Kafka JVM Heap options
   required: true
-  value: "-Xmx1G -Xms1G"
+  value: "-Xmx1960M -Xms1960M"
 - name: SERVER_NUM_PARTITIONS
   description: >
     The default number of log partitions per topic.
@@ -47,34 +47,29 @@ parameters:
   description: >
     Topic deletion enabled.
     Switch to enable topic deletion or not, default value is false
-  value: "false"
+  value: "true"
 - name: SERVER_LOG_RETENTION_HOURS
   description: >
     Log retention hours.
     The minimum age of a log file to be eligible for deletion
-  value: "168"
-- name: KAFKA_ZK_LOCAL
-  description: >
-    Use local zookeeper (*KAFKA_ZK_LOCAL).
-    Wheter you want to start a local zookeeper proccess into the same container
-  required: true
-  value: "true"
+  value: "2147483647"
 - name: SERVER_ZOOKEEPER_CONNECT
   description: >
     Zookeeper conection list as URL, nodes separated by ','.
-    This value takes effect when KAFKA_ZK_LOCAL is false
-  value: "localhost:2181"
+  value: "zk-persistent-0.zk-persistent:2181,zk-persistent-1.zk-persistent:2181,zk-persistent-2.zk-persistent:2181"
+  required: true
+- name: SERVER_ZOOKEEPER_CONNECT_TIMEOUT
+  description: >
+    The max time that the client waits to establish a connection to zookeeper (ms).
+  value: "6000"
+  required: true
 - name: VOLUME_KAFKA_CAPACITY
   description: Kafka logs capacity
   required: true
   value: "10Gi"
-- name: VOLUME_ZK_CAPACITY
-  description: Zookeeper data capacity
-  required: true
-  value: "10Gi"
 - name: RESOURCE_MEMORY_REQ
   description: The memory resource request.
-  value: "1Gi"
+  value: "2Gi"
 - name: RESOURCE_MEMORY_LIMIT
   description: The limits for memory resource.
   value: "2Gi"
@@ -84,6 +79,10 @@ parameters:
 - name: RESOURCE_CPU_LIMIT
   description: The limits for CPU resource.
   value: "2"
+- name: LP_INITIAL_DELAY
+  description: >
+    LivenessProbe initial delay in seconds.
+  value: "30"
 
 objects:
 - apiVersion: v1
@@ -91,7 +90,7 @@ objects:
   metadata:
     name: ${NAME}
     labels:
-      app: ${NAME}
+      kafka-name: ${NAME}
     annotations:
       service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
   spec:
@@ -106,19 +105,22 @@ objects:
       name: zkleader
     clusterIP: None
     selector:
-      app: ${NAME}
-
+      kafka-name: ${NAME}
 - apiVersion: apps/v1alpha1
   kind: PetSet
   metadata:
     name: ${NAME}
+    labels:
+      kafka-name: ${NAME}
   spec:
     serviceName: ${NAME}
-    replicas: ${SCALE}
+    replicas: ${REPLICAS}
     template:
       metadata:
         labels:
-          app: ${NAME}
+          kafka-name: ${NAME}
+          template: kafka-persistent
+          component: kafka
         annotations:
           pod.alpha.kubernetes.io/initialized: "true"
           scheduler.alpha.kubernetes.io/affinity: >
@@ -127,7 +129,7 @@ objects:
                 "requiredDuringSchedulingIgnoredDuringExecution": [{
                   "labelSelector": {
                     "matchExpressions": [{
-                      "key": "app",
+                      "key": "kafka-name",
                       "operator": "In",
                       "values": ["${NAME}"]
                     }]
@@ -140,7 +142,7 @@ objects:
         containers:
         - name: ${NAME}
           imagePullPolicy: IfNotPresent
-          image: bbvalabs/kafka:${SCALA_VERSION}-${KAFKA_VERSION}
+          image: ${SOURCE_IMAGE}:${SCALA_VERSION}-${KAFKA_VERSION}
           resources:
             requests:
               memory: ${RESOURCE_MEMORY_REQ}
@@ -163,11 +165,9 @@ objects:
           - name:  SCALA_VERSION
             value: ${SCALA_VERSION}
           - name : KAFKA_REPLICAS
-            value: ${SCALE}
+            value: ${REPLICAS}
           - name:  KAFKA_ZK_LOCAL
-            value: ${KAFKA_ZK_LOCAL}
-          - name : ZOO_HEAP_OPTS
-            value: ${ZK_HEAP_OPTS}
+            value: "false"
           - name:  KAFKA_HEAP_OPTS
             value: ${KAFKA_HEAP_OPTS}
           - name:  SERVER_num_partitions
@@ -178,36 +178,22 @@ objects:
             value: ${SERVER_LOG_RETENTION_HOURS}
           - name:  SERVER_zookeeper_connect
             value: ${SERVER_ZOOKEEPER_CONNECT}
-          - name: SERVER_log_dirs
+          - name:  SERVER_log_dirs
             value: "/opt/kafka/data/logs"
-          - name: SERVER_zookeeper_connection_timeout_ms
-            value: "30000"
-          # TODO: Resolve HostNotFound exception of zookeeper servers while kafka is starting up
-          #readinessProbe:
-          #  exec:
-          #    command:
-          #    - kafka_server_status.sh
-          #  initialDelaySeconds: 15
-          #  timeoutSeconds: 5
+          - name:  SERVER_zookeeper_connection_timeout_ms
+            value: ${SERVER_ZOOKEEPER_CONNECT_TIMEOUT}
           livenessProbe:
             exec:
               command:
               - kafka_server_status.sh
-            initialDelaySeconds: 18
-            timeoutSeconds: 8
+            initialDelaySeconds: ${LP_INITIAL_DELAY}
+            timeoutSeconds: 5
           volumeMounts:
           - name: kafka-data
             mountPath: /opt/kafka/data
-          - name: zookeeper-data
-            mountPath: /opt/kafka/zookeeper
-#          securityContext:
-#            runAsUser: 10000
-#            fsGroup: 10000
     volumeClaimTemplates:
     - metadata:
         name: kafka-data
-        labels:
-          app: ${NAME}
         annotations:
           volume.alpha.kubernetes.io/storage-class: anything
       spec:
@@ -215,14 +201,3 @@ objects:
         resources:
           requests:
             storage: ${VOLUME_KAFKA_CAPACITY}
-    - metadata:
-        name: zookeeper-data
-        labels:
-          app: ${NAME}
-        annotations:
-          volume.alpha.kubernetes.io/storage-class: anything
-      spec:
-        accessModes: [ "ReadWriteOnce" ]
-        resources:
-          requests:
-            storage: ${VOLUME_ZK_CAPACITY}

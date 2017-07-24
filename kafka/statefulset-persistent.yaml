@@ -1,0 +1,205 @@
+kind: Template
+apiVersion: v1
+metadata:
+  name: kafka-persistent
+  annotations:
+    openshift.io/display-name: Kafka (Persistent)
+    description: Create a Kafka cluster, with persistent storage.
+    iconClass: icon-database
+    tags: messaging,kafka
+labels:
+  template: kafka-persistent
+  component: kafka
+parameters:
+- name: NAME
+  description: Name
+  required: true
+  value: kafka
+- name: KAFKA_VERSION
+  description: Kafka Version
+  required: true
+  value: "0.10.2.1"
+- name: SCALA_VERSION
+  description: Scala Version
+  required: true
+  value: "2.12"
+- name: SOURCE_IMAGE
+  description: Container image source
+  value: engapa/kafka
+  required: true
+- name: REPLICAS
+  description: Number of replicas
+  required: true
+  value: "3"
+- name: KAFKA_HEAP_OPTS
+  description: Kafka JVM Heap options
+  required: true
+  value: "-Xmx1960M -Xms1960M"
+- name: SERVER_NUM_PARTITIONS
+  description: >
+    The default number of log partitions per topic.
+    More partitions allow greater
+    parallelism for consumption, but this will also result in more files across
+    the brokers
+  required: true
+  value: "1"
+- name: SERVER_DELETE_TOPIC_ENABLE
+  description: >
+    Topic deletion enabled.
+    Switch to enable topic deletion or not, default value is false
+  value: "true"
+- name: SERVER_LOG_RETENTION_HOURS
+  description: >
+    Log retention hours.
+    The minimum age of a log file to be eligible for deletion
+  value: "2147483647"
+- name: SERVER_ZOOKEEPER_CONNECT
+  description: >
+    Zookeeper conection list as URL, nodes separated by ','.
+  value: "zk-persistent-0.zk-persistent:2181,zk-persistent-1.zk-persistent:2181,zk-persistent-2.zk-persistent:2181"
+  required: true
+- name: SERVER_ZOOKEEPER_CONNECT_TIMEOUT
+  description: >
+    The max time that the client waits to establish a connection to zookeeper (ms).
+  value: "6000"
+  required: true
+- name: VOLUME_KAFKA_CAPACITY
+  description: Kafka logs capacity
+  required: true
+  value: "10Gi"
+- name: RESOURCE_MEMORY_REQ
+  description: The memory resource request.
+  value: "2Gi"
+- name: RESOURCE_MEMORY_LIMIT
+  description: The limits for memory resource.
+  value: "2Gi"
+- name: RESOURCE_CPU_REQ
+  description: The CPU resource request.
+  value: "1"
+- name: RESOURCE_CPU_LIMIT
+  description: The limits for CPU resource.
+  value: "2"
+- name: LP_INITIAL_DELAY
+  description: >
+    LivenessProbe initial delay in seconds.
+  value: "30"
+
+objects:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${NAME}
+    labels:
+      kafka-name: ${NAME}
+    annotations:
+      service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+  spec:
+    ports:
+    - port: 9092
+      name: server
+    - port: 2181
+      name: zkclient
+    - port: 2888
+      name: zkserver
+    - port: 3888
+      name: zkleader
+    clusterIP: None
+    selector:
+      kafka-name: ${NAME}
+- apiVersion: apps/v1beta1
+  kind: StatefulSet
+  metadata:
+    name: ${NAME}
+    labels:
+      kafka-name: ${NAME}
+  spec:
+    podManagementPolicy: "Parallel"
+    serviceName: ${NAME}
+    replicas: ${REPLICAS}
+    template:
+      metadata:
+        labels:
+          kafka-name: ${NAME}
+          template: kafka-persistent
+          component: kafka
+        annotations:
+          # Use this annotation if you want allocate each pod on different node
+          # Note the number of nodes must be upper than REPLICAS parameter.
+          scheduler.alpha.kubernetes.io/affinity: >
+            {
+              "podAntiAffinity": {
+                "requiredDuringSchedulingIgnoredDuringExecution": [{
+                  "labelSelector": {
+                    "matchExpressions": [{
+                      "key": "kafka-name",
+                      "operator": "In",
+                      "values": ["${NAME}"]
+                    }]
+                  },
+                  "topologyKey": "kubernetes.io/hostname"
+                }]
+              }
+            }
+      spec:
+        containers:
+        - name: ${NAME}
+          imagePullPolicy: IfNotPresent
+          image: ${SOURCE_IMAGE}:${SCALA_VERSION}-${KAFKA_VERSION}
+          resources:
+            requests:
+              memory: ${RESOURCE_MEMORY_REQ}
+              cpu: ${RESOURCE_CPU_REQ}
+            limits:
+              memory: ${RESOURCE_MEMORY_LIMIT}
+              cpu: ${RESOURCE_CPU_LIMIT}
+          ports:
+          - containerPort: 9092
+            name: server
+          - containerPort: 2181
+            name: zkclient
+          - containerPort: 2888
+            name: zkserver
+          - containerPort: 3888
+            name: zkleader
+          env:
+          - name:  KAFKA_VERSION
+            value: ${KAFKA_VERSION}
+          - name:  SCALA_VERSION
+            value: ${SCALA_VERSION}
+          - name : KAFKA_REPLICAS
+            value: ${REPLICAS}
+          - name:  KAFKA_ZK_LOCAL
+            value: "false"
+          - name:  KAFKA_HEAP_OPTS
+            value: ${KAFKA_HEAP_OPTS}
+          - name:  SERVER_num_partitions
+            value: ${SERVER_NUM_PARTITIONS}
+          - name:  SERVER_delete_topic_enable
+            value: ${SERVER_DELETE_TOPIC_ENABLE}
+          - name:  SERVER_log_retention_hours
+            value: ${SERVER_LOG_RETENTION_HOURS}
+          - name:  SERVER_zookeeper_connect
+            value: ${SERVER_ZOOKEEPER_CONNECT}
+          - name:  SERVER_log_dirs
+            value: "/opt/kafka/data/logs"
+          - name:  SERVER_zookeeper_connection_timeout_ms
+            value: ${SERVER_ZOOKEEPER_CONNECT_TIMEOUT}
+          livenessProbe:
+            exec:
+              command:
+              - kafka_server_status.sh
+            initialDelaySeconds: ${LP_INITIAL_DELAY}
+            timeoutSeconds: 5
+          volumeMounts:
+          - name: kafka-data
+            mountPath: /opt/kafka/data
+    volumeClaimTemplates:
+    - metadata:
+        name: kafka-data
+        annotations:
+          volume.alpha.kubernetes.io/storage-class: anything
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: ${VOLUME_KAFKA_CAPACITY}

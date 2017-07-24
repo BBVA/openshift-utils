@@ -2,51 +2,65 @@
 
 Kafka cluster deployment.
 
-The resources found here are templates for Openshift catalog.
+The resources found here are templates for Openshift.
+
+Two kubernetes resources will be used mainly:
+
+* [PetSet](https://kubernetes.io/docs/user-guide/petset/) (for 1.3<= kubernetes version < 1.5)
+* [StatefulSet](https://kubernetes.io/docs/concepts/abstractions/controllers/statefulsets/) (since version 1.5 of kubernetes)
+
+A Headless Service will control the network domain for the ZooKeeper processes.
+Each pet is available through this service at this hostname from any place inside kubernetes/openshift:
+
+`zk-<i>.zk-svc.<namespace>.svc.cluster.local`
+
+where ***i*** is the pet index and ***namespace*** is the namespace where petset was deployed.
+
+Inside the same namespace you also can use this shortened form: `zk-<i>.zk`
 
 ## Topologies
 
-We've got at least three ways to deploy a kafka cluster :
+We've got two ways to deploy a kafka cluster (and Ephemeral and Persistent modes according the storage type that you prefer):
 
-### Single All-in-one (zookeeper sidecar)
+Users can choose how to connect to a zookeeper cluster by configuring these parameters:
 
-Both zookeeper and kafka processes running in the same container.
+* KAFKA_ZK_LOCAL: set to 'true' value if an internal zookeeper process should be run. Change to 'false' if you have a reachable zookeeper cluster to connect to.
+* SERVER_zookeeper_connect=\<your-zookeeper-nodes\>. This property is required if `KAFKA_ZK_LOCAL=false` in other case the connection string will be auto-generated.
 
-By default when someone launches a container based on `bbvalabs/kafka` docker image we'll have these processes running together.
+The resources `petset.yaml` and `statefulset.yaml` can be launched with internal (`KAFKA_ZK_LOCAL=true`) or external (`KAFKA_ZK_LOCAL=false` and `SERVER_zookeeper_connect`) zookeeper.
+Both cases haven't persistent storage and would be appropriated for testing purposes.
 
-This topology is ver useful for developers or testing purposes.
+For production environments we recommend you to use resources with suffixes `persistent` (`KAFKA_ZK_LOCAL=false` and `SERVER_zookeeper_connect`) or `zk-persistent` (`KAFKA_ZK_LOCAL=true`).
+Theses both resources use persistent storage with different capacities for each one.
 
+### Examples
+#### Ephemeral cluster with Zookeeper sidecar
+
+Optionally users can choose run an internal zookeeper cluster by configuring these parameters:
+
+* KAFKA_ZK_LOCAL=true
+* SERVER_zookeeper_connect: This property is not required, it will be auto-generated internally.
 
 ```bash
-$ oc create -f kafka-petset.yaml
-$ oc new-app kafka -p SCALE=1
+$ oc create -f <petset|stafulset>.yaml
+$ oc new-app kafka -p REPLICAS=1 -p ZK_LOCAL=true
 ```
 
-You may use the Openshift dashboard if you prefer to do that from a web interface.
+> NOTE: params between '[]' characters are optional.
 
-### External zookeeper
-
-Deploy kafka brokers with external zookeeper connection.
-
-These env variables are required :
-
-* KAFKA_ZK_LOCAL=false
-* SERVER_zookeeper_connect=\<your-zookeeper-nodes\>
-
-This topology is the most convenient in production environments.
-
-### Clustered All-in-one (zookeeper cluster sidecar)
-
-A zookeeper cluster with a kafka broker inside each node.
 The number of nodes must be a valid quorum for zookeeper (1, 3, 5, ...).
+For example, if you want to have a quorum of 3 zookeeper nodes, then we'll have got 3 kafka brokers too.
 
-For example if you want to have a quorum of 3 zookeeper nodes , then we'll have got 3 brokers too.
+#### Persistent storage with external Zookeeper
 
-## Notes
+First of all, [deploy a zookeeper cluster](https://github.com/engapa/zookeeper-k8s-openshift).
 
-PetSets are available from kubernetes ***1.3***, and from version ***1.5*** they are renamed as StatefulSets.
+```bash
+$ oc create -f <petset|stafulset>[-zk]-persistent.yaml
+$ oc new-app kafka -p SERVER_zookeeper_connect=<zookeeper-nodes>
+```
 
-### Local testing
+## Local testing
 
 We recommend to use "minishift" in order to get quickly a ready Openshift deployment.
 
@@ -59,17 +73,45 @@ $ minishift config get openshift-version
 
 If no version is showed in last command this means that the latest stable version is being used.
 
-Setup the right version in order to use Petsets or StatefulSets:
+Setup the right template according to use Petsets or StatefulSets:
 
 ```bash
 $ minishift config set openshift-version <version>
 $ minishift start
-$ oc create -f <template>-local.yaml
+$ oc create -f <template>.yaml
 $ oc new-app kafka [-p parameter=value]
 $ minishift console
 ```
 
+## Clean up
 
+To remove all resources related to one kafka cluster deployment launch this command:
+
+```sh
+$ oc delete all,<petset|statefulset>[,pvc] -l kafka-name=<name> [-n <namespace>|--all-namespaces]
+```
+where '<name>' is the value of param NAME. Note that pvc resources are marked as optional in the command,
+it's up to you preserver or not the persistent volumes (by default when a pvc is deleted the persistent volume will be deleted as well).
+Type the namespace option if you are in a different namespace that resources are, and indicate --all-namespaces option if all namespaces should be considered.
+
+It's possible delete all resources created by using the template:
+with cluster created by template name:
+
+```sh
+$ oc delete all,<petset|statefulset>[,pvc] -l template=kafka[-zk][-persistent] [-n <namespace>] [--all-namespaces]
+```
+
+Also someone can remove all resources of type kafka, belong to all clusters and templates:
+
+```sh
+$ oc delete all,<petset|statefulset>[,pvc] -l component=kafka [-n <namespace>] [--all-namespaces]
+```
+
+And finally if you even want to remove the template:
+
+```sh
+$ oc delete template kafka[-zk][-persistent] [-n <namespace>] [--all-namespaces]
+```
 
 
 

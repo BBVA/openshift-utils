@@ -24,8 +24,8 @@ We've got two ways to deploy a kafka cluster (and Ephemeral and Persistent modes
 
 Users can choose how to connect to a zookeeper cluster by configuring these parameters:
 
-* KAFKA_ZK_LOCAL: set to 'true' value if an internal zookeeper process should be run. Change to 'false' if you have a reachable zookeeper cluster to connect to.
-* SERVER_zookeeper_connect=\<your-zookeeper-nodes\>. This property is required if `KAFKA_ZK_LOCAL=false` in other case the connection string will be auto-generated.
+* **KAFKA_ZK_LOCAL**: set to 'true' value if an internal zookeeper process should be run. Change to 'false' if you have a reachable zookeeper cluster to connect to.
+* **SERVER_zookeeper_connect**=\<your-zookeeper-nodes\>. This property is required if `KAFKA_ZK_LOCAL=false` in other case the connection string will be auto-generated.
 
 The resources `petset.yaml` and `statefulset.yaml` can be launched with internal (`KAFKA_ZK_LOCAL=true`) or external (`KAFKA_ZK_LOCAL=false` and `SERVER_zookeeper_connect`) zookeeper.
 Both cases haven't persistent storage and would be appropriated for testing purposes.
@@ -36,14 +36,9 @@ Theses both resources use persistent storage with different capacities for each 
 ### Examples
 #### Ephemeral cluster with Zookeeper sidecar
 
-Optionally users can choose run an internal zookeeper cluster by configuring these parameters:
-
-* KAFKA_ZK_LOCAL=true
-* SERVER_zookeeper_connect: This property is not required, it will be auto-generated internally.
-
 ```bash
 $ oc create -f <petset|stafulset>.yaml
-$ oc new-app kafka -p REPLICAS=1 -p ZK_LOCAL=true
+$ oc new-app kafka -p REPLICAS=1
 ```
 
 > NOTE: params between '[]' characters are optional.

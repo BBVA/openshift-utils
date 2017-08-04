@@ -85,31 +85,24 @@ To remove all resources related to one kafka cluster deployment launch this comm
 ```sh
 $ oc delete all,<petset|statefulset>[,pvc] -l kafka-name=<name> [-n <namespace>|--all-namespaces]
 ```
-where '<name>' is the value of param NAME. Note that pvc resources are marked as optional in the command,
-it's up to you preserver or not the persistent volumes (by default when a pvc is deleted the persistent volume will be deleted as well).
-Type the namespace option if you are in a different namespace that resources are, and indicate --all-namespaces option if all namespaces should be considered.
+where '\<name\>' is the value of param NAME. Note that pvc resources are marked as optional in the command,
+it's up to you preserve or not the persistent volumes (by default when a pvc is deleted the persistent volume will be deleted as well).
+Type the namespace option if you are in a different namespace from resources are, and indicate `--all-namespaces` option if all namespaces should be considered.
 
-It's possible delete all resources created by using the template:
-with cluster created by template name:
+It's possible to delete all resources created by using the template:
 
 ```sh
 $ oc delete all,<petset|statefulset>[,pvc] -l template=kafka[-zk][-persistent] [-n <namespace>] [--all-namespaces]
 ```
 
-Also someone can remove all resources of type kafka, belong to all clusters and templates:
+Also someone can remove all resources of type kafka belong to all clusters and templates:
 
 ```sh
 $ oc delete all,<petset|statefulset>[,pvc] -l component=kafka [-n <namespace>] [--all-namespaces]
 ```
 
-And finally if you even want to remove the template:
+And finally, if you even want to remove the templates:
 
 ```sh
 $ oc delete template kafka[-zk][-persistent] [-n <namespace>] [--all-namespaces]
 ```
-
-
-
-
-
-

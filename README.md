@@ -4,7 +4,7 @@ Utilities and resources for Openshift
 
 ## Deploy Openshift on Openstack
 
-In order to deploy Openshift in our Openstack (EuroCloud/InnoCloud) we've extended the official [repository](https://github.com/redhat-openstack/openshift-on-openstack) in this one:
+In order to deploy Openshift in our Openstack (EuroCloud) we've extended the official [repository](https://github.com/redhat-openstack/openshift-on-openstack) in this one:
 
 https://github.com/BBVA/openshift-on-openstack
 
